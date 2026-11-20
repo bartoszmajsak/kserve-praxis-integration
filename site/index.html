@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KServe and Praxis integration</title>
-<meta name="description" content="What changes for a KServe LLMInferenceService when the MaaS data plane moves from Gateway API on Istio to Praxis.">
+<meta name="description" content="What changes for a KServe LLMInferenceService when the data plane moves from Gateway API on Istio to Praxis.">
 <script>
   (function () {
     try {
@@ -68,6 +68,8 @@
   .lede { font-size: 18px; color: var(--muted); }
   section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
   code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
   .src { color: var(--muted); font-size: 13px; }
   .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
   .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -139,7 +141,7 @@
 
 <header class="prose">
   <h1>KServe and Praxis integration</h1>
-  <p class="lede">What changes for a KServe <code>LLMInferenceService</code> when the MaaS data plane moves from Gateway API on Istio to Praxis.</p>
+  <p class="lede">What changes for a KServe <code>LLMInferenceService</code> when the data plane moves from Gateway API on Istio to Praxis.</p>
 </header>
 
 <section class="pages">

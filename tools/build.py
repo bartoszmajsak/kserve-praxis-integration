@@ -30,7 +30,7 @@ GENERATED = ("docs", "site", "build/artifact")
 
 SITE_TITLE = "KServe and Praxis integration"
 SITE_LEDE = (
-    "What changes for a KServe `LLMInferenceService` when the MaaS data plane moves "
+    "What changes for a KServe `LLMInferenceService` when the data plane moves "
     "from Gateway API on Istio to Praxis."
 )
 

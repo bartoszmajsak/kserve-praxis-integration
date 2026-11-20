@@ -52,6 +52,8 @@
   .lede { font-size: 18px; color: var(--muted); }
   section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
   code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
 
   .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
   .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
@@ -247,15 +249,16 @@
       <div>
         <h3>Who does what, and why</h3>
         <ul>
+          <li>The user writes the same <code>MaaSModelRef</code> as today. Its spec needs no new field, because the backend, the port and the model names come from the service status. Its <code>httpRoute*</code> status fields have no source without a route, as in option 2.</li>
           <li>KServe does the same as in option 2. It publishes the backend, the port, the served model names and <code>Ready</code> in status.</li>
           <li>MaaS reads that status and writes the routing of every published model of a tenant into the tenant's <code>Proxy</code>, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined".</li>
-          <li><code>gateway-controller</code> renders the <code>Proxy</code> and the <code>Policy</code>. It does not need the <code>ModelProvider</code> type, which is not implemented yet (<code>#40</code>, <code>#42</code>).</li>
+          <li><code>gateway-controller</code> renders the <code>Proxy</code> and the <code>Policy</code>. It does not need the <code>ModelProvider</code> type, which is not implemented yet (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</li>
         </ul>
       </div>
       <div>
         <h3>Limits</h3>
         <ul>
-          <li>A routing change restarts the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, and the draft that renders the proxy (<code>gateway-controller#82</code>) mounts its configuration in a way that rolls the pods on every change.</li>
+          <li>In the current draft a routing change rolls the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy (<a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.</li>
           <li>Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. Options 1 and 2 have the same limit until that client is extended.</li>
           <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
           <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>, which is option 2.</li>
@@ -290,13 +293,14 @@
 <section>
   <div class="prose">
     <h2>Not verified</h2>
-    <p>The current setup is read from the MaaS, KServe and AGC code. The two options describe objects that do not exist yet.</p>
+    <p>The current setup is read from the MaaS, KServe and AGC code. The three options describe objects that do not exist yet.</p>
     <ul>
       <li>Option 1 follows the proposal draft dated 2026-11-19. <code>Proxy</code> and <code>Policy</code> exist as types in <code>gateway-controller</code>, and <code>ModelProvider</code> does not.</li>
       <li>The namespaces of the Praxis objects follow the example in the proposal, which places them in the tenant namespace.</li>
       <li>In option 2, removing the provider through the existing finalizer on <code>MaaSModelRef</code> is new code. The finalizer and its cleanup hook exist.</li>
       <li>Whether an <code>InferenceObjective</code> has an owner was not checked.</li>
       <li>Option 3 relies on the proposal's remark that routing stays MaaS-defined when the routing slot is not delegated. What an inline filter chain in a <code>Proxy</code> can express was read from the types, and nothing renders it yet.</li>
+      <li>The pod roll on a routing change in option 3 is read from the draft <a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a> at <a href="https://github.com/praxis-proxy/gateway-controller/commit/aa8180fdf5734289cfdfcfd6efcd6a744e41b485" target="_blank" rel="noopener"><code>aa8180f</code></a>. It was not run, and the draft can change before it merges.</li>
       <li>None of this was run on a cluster.</li>
     </ul>
   </div>

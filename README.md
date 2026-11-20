@@ -1,6 +1,6 @@
 # kserve-praxis-integration
 
-Two analyses of how a KServe `LLMInferenceService` is served when the MaaS data plane moves from Gateway API on Istio to Praxis, and the scripts that build them.
+Two analyses of how a KServe `LLMInferenceService` is served when the data plane moves from Gateway API on Istio to Praxis, and the scripts that build them.
 
 - [Praxis ingress paths](docs/ingress-paths.md) covers how a request reaches the model today and with Praxis, what breaks between MaaS and KServe when the per-model HTTPRoute goes away, and who should own the `ModelProvider`.
 - [Praxis CR relationships](docs/cr-relationships.md) maps which custom resource references which, which one owns which, and which controller writes each, today and in three options for routing a model through Praxis.
