@@ -158,7 +158,7 @@ Delivering the decision depends on work in Praxis that is not ours. The cut-over
 ## Open Questions
 
 - **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today. The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
-- **How the connection from the proxy to the EPP is secured.** The TLS of the EPP is controlled by a cluster-wide KServe setting. At `a59c927` the EPP client of Praxis has no TLS settings, and AFAICT its gRPC library is built without TLS. This was read from the code and not tested. Either the client gains TLS, or the EPP is served without it for Praxis.
+- **Transport security between the proxy and the EPP.** KServe enables TLS on the EPP through a cluster-wide setting. At the time of writing, the EPP client in Praxis exposes no TLS configuration, and its gRPC dependency is built without TLS support. This is based on code inspection and has not been validated on a cluster. The options are to add TLS support to the client or to run the EPP without TLS for traffic from Praxis, and the choice has not been made.
 
 ## Alternatives
 
