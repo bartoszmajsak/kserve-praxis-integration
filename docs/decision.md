@@ -30,6 +30,7 @@ We took the goals from what users, clients and the two controllers must not lose
 ### Non-goals
 
 - The move to Praxis itself. It is the starting point and is not decided here.
+- Services that are not published through MaaS. How they are served is open and is not decided here.
 - Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
 - Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
 - Canary and weighted routing between services in the first step. The owner of the weights is still open.
