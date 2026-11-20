@@ -14,6 +14,30 @@ Moving the data plane from Gateway API on Istio to Praxis removes the per-model 
 
 Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the `ModelProvider`, and its API is still open ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). The request path, the problems the move exposes and the state of Praxis are described in [Praxis context](context.md).
 
+## Goals and non-goals
+
+We took the goals from what users, clients and the two controllers must not lose in the move. The non-goals are left out on purpose, to keep the first step small.
+
+### Goals
+
+- Models published through MaaS are served through Praxis without a per-model HTTPRoute.
+- Users and the dashboard keep writing the same objects. Clients keep the hostname, the request URL with the model in the body, and the model ID.
+- MaaS and KServe integrate through one contract, the `LLMInferenceService` status, and every object has one writer.
+- Upstream KServe needs no Praxis types and no tenant concept.
+- The first step does not wait for APIs that are still open in Praxis, and the `ModelProvider` can be adopted later without a user-facing change.
+- A tenant can move in stages and be rolled back, and the preparation can start before Praxis is ready.
+
+### Non-goals
+
+- Praxis routing for services that are not published through MaaS. They stay on Gateway API with Kuadrant.
+- Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
+- Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
+- Canary and weighted routing between services in the first step. The owner of the weights is still open.
+- An ingress without Gateway API. The tenant Gateway stays in front of the proxy.
+- Per-model path URLs of the form `/<namespace>/<name>/v1/...` through Praxis.
+- Moving a single model. The unit of the cut-over is the tenant.
+- Closing the gaps in Praxis itself: proxy deployment, the EPP client and the policy engine. We depend on them and track them.
+
 ## Decision
 
 We keep `MaaSModelRef` as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and `Ready`, with or without a route. MaaS reads that status and writes the routing of each published model into the `Proxy` of the tenant, next to the policy slot, and `gateway-controller` renders it. No `ModelProvider` is created.
