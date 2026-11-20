@@ -148,7 +148,7 @@ def compose(bodies):
     alternative = chapter(
         prose(
             "<h2>Alternatives</h2>",
-            "<p>Two other ways to replace the per-model HTTPRoute were considered.</p>",
+            "<p>Two other ways to integrate KServe and MaaS with Praxis were considered.</p>",
             "<h3>Option 1: KServe creates the ModelProvider</h3>",
             f"<p>{find(LEAD, option1, 'option 1 lead')} It is not preferred for these reasons.</p>",
             list_after(option1, "<h3>Why it is not preferred</h3>"),

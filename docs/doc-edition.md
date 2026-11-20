@@ -13,7 +13,7 @@
 
 ## What
 
-Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps `MaaSModelRef` as the object users write. KServe publishes the backend in the `LLMInferenceService` status, and MaaS writes the routing into the `Proxy` of the tenant. The `ModelProvider` API can be adopted later.
+The data plane moves from Gateway API on Istio to Praxis. The decision covers how a KServe `LLMInferenceService` that is published through MaaS is served in that setup: what KServe publishes about the service, which component writes its routing in Praxis, and what users write. KServe publishes the backend in the `LLMInferenceService` status, MaaS writes the routing into the `Proxy` of the tenant, and `MaaSModelRef` stays the object users write. The `ModelProvider` API can be adopted later.
 
 ## Why
 
@@ -56,15 +56,16 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 
 ## Goals
 
-- Models published through MaaS are served through Praxis without a per-model HTTPRoute.
+- A model published through MaaS is served through Praxis.
 - Users and the dashboard keep writing the same objects. Clients keep the hostname, the request URL with the model in the body, and the model ID.
-- MaaS and KServe integrate through one contract, the `LLMInferenceService` status, and every object has one writer.
+- MaaS and KServe integrate through one contract, the `LLMInferenceService` status, which does not depend on how the data plane routes. Every object has one writer.
 - Upstream KServe needs no Praxis types and no tenant concept.
 - The first step does not wait for APIs that are still open in Praxis, and the `ModelProvider` can be adopted later without a user-facing change.
 - A tenant can move in stages and be rolled back, and the preparation can start before Praxis is ready.
 
 ## Non-Goals
 
+- The move to Praxis itself. It is the starting point and is not decided here.
 - Praxis routing for services that are not published through MaaS. They stay on Gateway API with Kuadrant.
 - Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
 - Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
@@ -144,7 +145,7 @@ MaaS has the larger share of the work. It derives nearly all model information f
 
 ## Alternatives
 
-Two other ways to replace the per-model HTTPRoute were considered.
+Two other ways to integrate KServe and MaaS with Praxis were considered.
 
 ### Option 1: KServe creates the ModelProvider
 
