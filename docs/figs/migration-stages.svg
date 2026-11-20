@@ -17,38 +17,54 @@
 .d-tile-b { fill: none; stroke: #8492a2; stroke-width: 1.2; }
 .d-tile-b.gw { stroke: #2459a6; stroke-width: 1.6; }
 .d-tile-b.px { stroke: #0b7d60; stroke-width: 1.6; }
-.d-tile-b.warn { stroke: #b0401c; stroke-width: 1.6; }
+.d-tile-b.warn { stroke: #c0352b; stroke-width: 1.6; }
 .d-head { fill: #eaeef3; }
 .d-head.gw { fill: #e3e9f3; }
 .d-head.px { fill: #dfeeea; }
-.d-head.warn { fill: #f5e6e1; }
+.d-head.warn { fill: #f7e5e3; }
 .d-kind { fill: #16202b; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12.5px; font-weight: 600; }
-.d-kind.gw { fill: #2459a6; } .d-kind.px { fill: #0b7d60; } .d-kind.warn { fill: #b0401c; }
+.d-kind.gw { fill: #2459a6; } .d-kind.px { fill: #0b7d60; } .d-kind.warn { fill: #c0352b; }
 .d-own { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; }
 .d-ico { color: #586574; }
-.d-ico.gw { color: #2459a6; } .d-ico.px { color: #0b7d60; } .d-ico.warn { color: #b0401c; }
+.d-ico.gw { color: #2459a6; } .d-ico.px { color: #0b7d60; } .d-ico.warn { color: #c0352b; }
 .d-grp { fill: #e3e8ed; stroke: #8492a2; stroke-width: 1.2; stroke-dasharray: 7 4; }
 .d-grp.gw { fill: #dee5ef; stroke: #2459a6; }
 .d-grp.px { fill: #dce8e9; stroke: #0b7d60; }
 .d-tab { fill: #8492a2; } .d-tab.gw { fill: #2459a6; } .d-tab.px { fill: #0b7d60; }
 .d-tabt { fill: #ffffff; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 600; }
 .d-pill { fill: #ffffff; stroke: #d6dce4; stroke-width: 1; }
-.d-pill.warn { stroke: #b0401c; } .d-pill.px { stroke: #0b7d60; }
+.d-pill.warn { stroke: #c0352b; } .d-pill.px { stroke: #0b7d60; }
 .d-pillt { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; font-weight: 500; }
-.d-pillt.warn { fill: #b0401c; } .d-pillt.px { fill: #0b7d60; }
+.d-pillt.warn { fill: #c0352b; } .d-pillt.px { fill: #0b7d60; }
 .d-t { fill: #16202b; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 13px; font-weight: 600; }
 .d-s { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; }
-.d-moved { fill: #b0401c; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; font-weight: 600; }
+.d-moved { fill: #c0352b; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; font-weight: 600; }
 .d-title { font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
-.d-title.gw { fill: #2459a6; } .d-title.px { fill: #0b7d60; } .d-title.warn { fill: #b0401c; }
+.d-title.gw { fill: #2459a6; } .d-title.px { fill: #0b7d60; } .d-title.warn { fill: #c0352b; }
 .d-edge { stroke: #16202b; stroke-width: 1.3; fill: none; }
-.d-edge.warn { stroke: #b0401c; stroke-width: 2; }
+.d-edge.warn { stroke: #c0352b; stroke-width: 2; }
 .d-edge.px { stroke: #0b7d60; stroke-width: 2; }
 .d-edge.dash { stroke-dasharray: 5 4; }
-.d-ah { fill: #16202b; } .d-ah.warn { fill: #b0401c; } .d-ah.px { fill: #0b7d60; }
+.d-ah { fill: #16202b; } .d-ah.warn { fill: #c0352b; } .d-ah.px { fill: #0b7d60; }
 .d-rule { stroke: #d6dce4; stroke-width: 1; }
 .d-legend { fill: #ffffff; stroke: #d6dce4; stroke-width: 1; }
 .d-lg { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; }
+.d-tile-b.ks { stroke: #2459a6; stroke-width: 1.6; }
+.d-tile-b.maas { stroke: #0b7d60; stroke-width: 1.6; }
+.d-tile-b.gc { stroke: #6b46c1; stroke-width: 1.6; }
+.d-tile-b.agc { stroke: #8a6100; stroke-width: 1.6; }
+.d-head.ks { fill: #e3e9f3; }
+.d-head.maas { fill: #dfeeea; }
+.d-head.gc { fill: #ece7f7; }
+.d-head.agc { fill: #ede7d9; }
+.d-kind.ks { fill: #2459a6; } .d-kind.maas { fill: #0b7d60; }
+.d-kind.gc { fill: #6b46c1; } .d-kind.agc { fill: #8a6100; }
+.d-pill.maas { stroke: #0b7d60; }
+.d-pillt.maas { fill: #0b7d60; }
+.d-edge.maas { stroke: #0b7d60; stroke-width: 2; }
+.d-ah.maas { fill: #0b7d60; }
+.d-rail { stroke: #8492a2; stroke-width: 1.5; fill: none; }
+.d-rail.warn { stroke: #c0352b; stroke-width: 2; }
 </style>
 <rect width="1040" height="682" fill="#ffffff"/>
 <rect class="d-grp px" x="782" y="346" width="206" height="152" rx="12"/>

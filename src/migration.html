@@ -1,127 +1,6 @@
 <title>Praxis migration</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<style>
-  /* Layout: one reading column, figures and tables may run wider inside their own scrollers. */
-  :root {
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --actor: #eaeef3;
-    --fg: #16202b;
-    --muted: #586574;
-    --line: #d6dce4;
-    --line-strong: #8492a2;
-    --gw: #2459a6;      /* Gateway API path */
-    --px: #0b7d60;      /* Praxis path */
-    --warn: #b0401c;    /* the contested or moved piece */
-    --code-bg: #e9edf2;
-    --canvas: #eef1f5;
-    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
-      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
-      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
-    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
-    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
-  }
-
-  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
-  .page {
-    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-    display: flex; flex-direction: column; gap: 44px;
-  }
-  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-  header.prose { gap: 10px; }
-  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
-  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
-  h3 { font-size: 15px; margin: 0; font-weight: 700; }
-  p, ul, ol { margin: 0; }
-  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
-  .lede { font-size: 18px; color: var(--muted); }
-  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
-  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
-  a:hover { text-decoration-color: currentColor; }
-  .src { color: var(--muted); font-size: 13px; }
-  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
-  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
-  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  .who ul { font-size: 14.5px; }
-
-  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
-  .answers > div:first-child { border-top: 0; }
-  @media (min-width: 840px) {
-    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
-    .answers > div:first-child { border-left: 0; }
-  }
-  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  .answers .a { font-weight: 700; font-size: 17px; }
-  .answers p { font-size: 14.5px; color: var(--muted); }
-
-  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
-  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
-  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
-  figcaption b { color: var(--fg); font-weight: 600; }
-
-  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
-  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
-  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
-  .yes { color: var(--px); font-weight: 600; }
-  .no { color: var(--warn); font-weight: 600; }
-  .part { color: var(--muted); font-weight: 600; }
-
-  /* diagram marks: tiles with a header strip, dashed groups with a tab, pill labels on edges */
-  .d-tile { fill: var(--panel); }
-  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
-  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
-  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
-  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
-  .d-head { fill: var(--actor); }
-  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
-  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
-  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
-  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
-  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
-  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
-  .d-ico { color: var(--muted); }
-  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
-  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
-  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
-  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
-  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
-  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
-  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
-  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
-  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
-  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
-  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
-  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
-  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
-  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
-  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
-  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
-  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
-  .d-edge.px { stroke: var(--px); stroke-width: 2; }
-  .d-edge.dash { stroke-dasharray: 5 4; }
-  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
-  .d-rule { stroke: var(--line); stroke-width: 1; }
-  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
-  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
-</style>
 
 <div class="page">
 
@@ -167,7 +46,7 @@
         <ul>
           <li>The user changes nothing. The <code>LLMInferenceService</code> keeps <code>spec.router.route</code> and <code>gateway.refs</code>, and the <code>MaaSModelRef</code> stays as it is.</li>
           <li>KServe publishes the backend, the port, the served model names and <code>Ready</code> in status with or without a route in stage 1. In stage 3 it stops rendering the HTTPRoute for a Gateway that opts in.</li>
-          <li>MaaS reads the service status in place of the route in stage 1. In stage 2 it creates the <code>Proxy</code> and the <code>Policy</code> of the tenant, one <code>ModelProvider</code> per <code>MaaSModelRef</code>, and the forwarding route on the tenant Gateway. The forwarding route has no owner today, and MaaS already manages the other objects of the tenant.</li>
+          <li>MaaS reads the service status in place of the route in stage 1. In stage 2 it creates the <code>Proxy</code> of the tenant with a routing entry per <code>MaaSModelRef</code>, the <code>Policy</code>, and the forwarding route on the tenant Gateway. The forwarding route has no owner today, and MaaS already manages the other objects of the tenant.</li>
           <li><code>gateway-controller</code> renders and deploys the proxy from the objects MaaS creates.</li>
           <li>The platform admin marks the tenant Gateway to start stage 3, and removes the mark to roll it back.</li>
         </ul>
@@ -180,7 +59,7 @@
       <thead><tr><th>Stage</th><th>Who</th><th>What changes</th><th>Client traffic</th><th>Rollback</th></tr></thead>
       <tbody>
         <tr><td class="num">1</td><td>MaaS, KServe</td><td>MaaS takes the backend, the model ID, readiness and the tenant from the <code>LLMInferenceService</code> status and its <code>gateway.refs</code>, and no longer looks up the HTTPRoute. KServe publishes complete status for a service without a route.</td><td>Istio</td><td>None needed. Behaviour is unchanged.</td></tr>
-        <tr><td class="num">2</td><td>MaaS, <code>gateway-controller</code></td><td>The tenant gets a <code>Proxy</code> and a <code>Policy</code>, and each <code>MaaSModelRef</code> gets a <code>ModelProvider</code> that references the same pool or Service as the route. MaaS adds the forwarding route to the tenant Gateway. The proxy is tested with requests addressed to it directly.</td><td>Istio</td><td>Delete the Praxis objects and the forwarding route.</td></tr>
+        <tr><td class="num">2</td><td>MaaS, <code>gateway-controller</code></td><td>The tenant gets a <code>Proxy</code> and a <code>Policy</code>, and each <code>MaaSModelRef</code> gets a routing entry in the <code>Proxy</code> that points at the same pool or Service as the route. MaaS adds the forwarding route to the tenant Gateway. The proxy is tested with requests addressed to it directly.</td><td>Istio</td><td>Delete the Praxis objects and the forwarding route.</td></tr>
         <tr><td class="num">3</td><td>Platform admin, KServe</td><td>The tenant Gateway is marked. KServe deletes the HTTPRoutes of the services on that Gateway, and their spec and status stay as they are. Their requests now match the forwarding route.</td><td>Praxis</td><td>Remove the mark. KServe creates the routes again, and they take precedence.</td></tr>
         <tr><td class="num">4</td><td>MaaS</td><td>MaaS stops generating Kuadrant policies for the tenant and deletes the ones on the Gateway.</td><td>Praxis</td><td>Generate the Kuadrant policies again, then roll back stage 3.</td></tr>
       </tbody>
@@ -191,7 +70,7 @@
 <section>
   <div class="prose">
     <h2>What can start now</h2>
-    <p>Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in <a href="ingress-paths.html">Praxis ingress paths</a>.</p>
+    <p>Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in <a href="decision.html">Praxis decision</a>.</p>
     <ul>
       <li>MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from <code>gateway.refs</code>, and writes the <code>InferenceObjective</code> without checking the route.</li>
       <li>KServe lets a service with a scheduler and no route become <code>Ready</code>, and publishes the pool, the port and the served model names for it.</li>
@@ -210,7 +89,6 @@
     <table>
       <thead><tr><th>Needed for</th><th>What is missing</th><th>State</th><th>Tracked in</th></tr></thead>
       <tbody>
-        <tr><td>Stage 2</td><td>A <code>ModelProvider</code> type and its controller.</td><td>Not implemented.</td><td><a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>gateway-controller#40</code></a> and <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>gateway-controller#42</code></a>, with no milestone. The KServe epic <a href="https://github.com/praxis-proxy/gateway-controller/issues/24" target="_blank" rel="noopener"><code>gateway-controller#24</code></a> is in the <a href="https://github.com/praxis-proxy/gateway-controller/milestone/1" target="_blank" rel="noopener"><code>v1.0.0</code> milestone</a>, due 2027-01-20.</td></tr>
         <tr><td>Stage 2</td><td>A proxy that is rendered and deployed from a <code>Proxy</code>.</td><td>In a draft.</td><td><a href="https://github.com/praxis-proxy/gateway-controller/issues/14" target="_blank" rel="noopener"><code>gateway-controller#14</code></a> to <a href="https://github.com/praxis-proxy/gateway-controller/issues/17" target="_blank" rel="noopener"><code>gateway-controller#17</code></a>, and the draft <a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>.</td></tr>
         <tr><td>Stage 3, services with a scheduler</td><td>An EPP client that selects its target per model, supports TLS and sends response bodies to the EPP.</td><td>It takes one static target, AFAICT it has no TLS, and it is off in published builds.</td><td>No open issue. <a href="https://github.com/praxis-proxy/ai/issues/165" target="_blank" rel="noopener"><code>ai#165</code></a> is closed as completed.</td></tr>
         <tr><td>Stage 3</td><td>Kubernetes token authentication and authorization.</td><td>Not implemented.</td><td><a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/8" target="_blank" rel="noopener"><code>0.8.0</code></a>, due 2026-12-18. <a href="https://github.com/praxis-proxy/policy/issues/214" target="_blank" rel="noopener"><code>policy#214</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/7" target="_blank" rel="noopener"><code>0.7.0</code></a>, due 2026-12-03.</td></tr>
@@ -221,6 +99,7 @@
   </div>
   <div class="prose">
     <ul>
+      <li>The <code>ModelProvider</code> API is not needed for any stage, because MaaS writes the routing into the <code>Proxy</code>.</li>
       <li>Because the cut-over is per tenant, one service with a scheduler blocks the cut-over of its tenant until the EPP client is extended.</li>
       <li>On the ODH build, strict NetworkPolicy takes the allowed namespaces from Gateway references only. The namespace of the proxy has to be allowed before stage 2.</li>
       <li>The FIPS image of Praxis is built without the policy filter today, and stage 3 needs it.</li>
@@ -231,16 +110,17 @@
 <section>
   <div class="prose">
     <h2>Limits of running Praxis next to the routes</h2>
-    <p>Stage 2 is a verification stage. It shows that the proxy, the policies and the providers of a tenant work, and it does not move client traffic to Praxis.</p>
+    <p>Stage 2 is a verification stage. It shows that the proxy, the policies and the routing of a tenant work, and it does not move client traffic to Praxis.</p>
     <ul>
       <li>KServe's model rules match <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/config/llmisvcconfig/config-llm-router-route.yaml#L193-L200" target="_blank" rel="noopener">an exact path and the model header</a>, which is more specific than a forwarding route can be, and Gateway API <a href="https://github.com/kubernetes-sigs/gateway-api/blob/v1.6.2/apis/v1/httproute_types.go#L184-L200" target="_blank" rel="noopener">gives precedence to the more specific rule</a>. The forwarding route therefore receives the requests for a model only after its per-model route has been removed.</li>
       <li>The mark is on the Gateway, so the cut-over moves all services of a tenant together. Moving a single model would need a switch per service, which is a new field or annotation in what users write. We left it out to keep the user-facing API unchanged.</li>
+      <li>In the current draft of the proxy deployment, every routing change rolls the proxy pods, so publishing a model in stage 2 or later restarts the proxy of its tenant.</li>
       <li>Limitador and Praxis do not share counters. AFAICT the token counters of a subscription restart at the cut-over.</li>
       <li>The gateway-level <code>AuthPolicy</code> and the default-deny rate limit apply to the forwarding route too. Either MaaS attaches policies to the forwarding route that allow the requests, which authenticates a request twice, or the gateway-level policies are removed in stage 3 and not in stage 4. This decision is open.</li>
       <li>In stage 2 Istio and Praxis call the same EPP. Its TLS is controlled by a cluster-wide KServe setting, and AFAICT the Praxis <code>ext_proc</code> client has no TLS, so test traffic for a service with a scheduler does not work yet either.</li>
-      <li>Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to delete the provider at the same time.</li>
-      <li>The model ID is a contract. Clients send the name MaaS publishes today, so <code>publishedName</code> has to equal <code>status.resolvedModelAlias</code>.</li>
-      <li>Requests to per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in <a href="ingress-paths.html">Praxis ingress paths</a>.</li>
+      <li>Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to remove the routing entry at the same time.</li>
+      <li>The model ID is a contract. Clients send the name MaaS publishes today, so the routing key has to equal <code>status.resolvedModelAlias</code>.</li>
+      <li>Requests to per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in <a href="decision.html">Praxis decision</a>.</li>
     </ul>
   </div>
 </section>

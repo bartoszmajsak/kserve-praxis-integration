@@ -75,8 +75,8 @@ def request_path():
     f.group(R, 190, W, 192, "Praxis proxy, one per tenant", "px")
     f.tile(x, 214, TW, 70, "Policy slot (PPE)", "MaaS creates the Policy",
            ["auth and token limits", "rendered by gateway-controller into the policy filter"], icon="shield")
-    f.tile(x, 292, TW, 70, "Routing slot", "from the ModelProviders",
-           ["weighted pick by published model name", "then the EPP call, over ext_proc"], accent="warn", icon="route")
+    f.tile(x, 292, TW, 70, "Routing slot", "MaaS writes it",
+           ["pick by published model name", "then the EPP call, over ext_proc"], accent="warn", icon="route")
 
     # the piece that moves
     f.edge([(L + 12 + TW, 279), (520, 279), (520, 327), (R + 12, 327)], accent="warn", dash=True)
@@ -97,50 +97,6 @@ def request_path():
         ("dash", "warn", "where that decision moves"),
         ("group", "", "one proxy and the layers inside it"),
         (None, "", "label on the right of a tile: who writes it, or where it applies"),
-    ])
-    return f
-
-
-@figure("modelprovider-ownership", "Ownership of the ModelProvider and the dependencies between the controllers")
-def modelprovider_ownership():
-    # Every edge runs from the component that acts to the object it acts on.
-    f = Fig(
-        "f2", 1040, 340,
-        "Ownership with MaaS creating the ModelProvider. The KServe controller owns the LLMInferenceService "
-        "status and the pool or Service. The MaaS controller reads that status and creates the ModelProvider "
-        "next to the MaaSModelRef, the Proxy and the Policy. gateway-controller reads the ModelProvider and "
-        "configures the Praxis proxy, which sends requests to the pool or Service. Dependencies run in one "
-        "direction.",
-    )
-    TW = 236
-    kx, mx, gx = 28, 402, 776
-    f.group(16, 54, 260, 170, "KServe controller")
-    f.tile(kx, 78, TW, 70, "LLMInferenceService", "user", ["status: backend, port,", "model names, Ready"], icon="cr")
-    f.tile(kx, 156, TW, 54, "Pool or Service", "KServe creates", ["InferencePool, EPP, pods"], icon="pool")
-
-    f.group(390, 54, 260, 232, "MaaS controller")
-    f.tile(mx, 78, TW, 70, "ModelProvider", "MaaS creates", ["backend, model ID and tenant", "written by MaaS only"],
-           accent="px", icon="cr")
-    f.tile(mx, 156, TW, 54, "MaaSModelRef", "user", ["names the service and the tenant"], icon="cr")
-    f.tile(mx, 218, TW, 54, "Proxy, Policy", "MaaS creates", ["one per tenant"], icon="hex")
-
-    f.group(764, 54, 260, 170, "Praxis")
-    f.tile(gx, 78, TW, 70, "gateway-controller", None, ["reads providers, Proxy, Policy", "renders the proxy config"], icon="ctrl")
-    f.tile(gx, 156, TW, 54, "Praxis proxy", None, ["routes on the published model name"], icon="hex")
-
-    f.edge([(390, 113), (kx + TW, 113)], accent="px")
-    f.pill(327, 113, "reads status", "px")
-    f.edge([(gx, 113), (mx + TW, 113)])
-    f.pill(707, 113, "reads")
-    f.edge([(gx + TW / 2, 210), (gx + TW / 2, 316), (kx + TW / 2, 316), (kx + TW / 2, 210)], dash=True)
-    f.pill(520, 316, "sends requests to")
-    f.legend([
-        ("line", "px", "MaaS reads the status, in place of the HTTPRoute lookup"),
-        ("line", "", "a controller reads the object it points at"),
-        ("dash", "", "request path"),
-        ("tile", "px", "written by MaaS only"),
-        ("group", "", "objects managed by one controller"),
-        (None, "", "label on the right of a tile: who writes it"),
     ])
     return f
 
@@ -400,10 +356,10 @@ def relationships_option_2():
     return f
 
 
-@figure("relationships-option-3", "Custom resources in option 3, where MaaS writes the routing and no ModelProvider exists")
+@figure("relationships-option-3", "Custom resources in the preferred option, where MaaS writes the routing and no ModelProvider exists")
 def relationships_option_3():
     f = RelFig("r4", 1040, 540,
-               "Custom resources in option 3. There is no ModelProvider. MaaS reads the LLMInferenceService "
+               "Custom resources in the preferred option. There is no ModelProvider. MaaS reads the LLMInferenceService "
                "status and writes the routing of each MaaSModelRef inline in the Proxy of the tenant, which "
                "gateway-controller renders. KServe writes only in the model namespace.")
     t = Lane(f, "T", "Tenant namespace")

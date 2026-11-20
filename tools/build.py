@@ -6,8 +6,11 @@ Usage: build.py [--out DIR]
 Writes, under DIR (the repository root by default):
   docs/NAME.md               the page as GitHub-flavoured Markdown
   docs/figs/FIG[-dark].svg   every figure as a standalone file, light and dark
-  site/NAME.html, index.html standalone HTML documents
-  build/artifact/NAME.html   the page source with its figures inlined, for the host
+  site/NAME.html, index.html standalone HTML documents, each with a Markdown view
+  build/artifact/NAME.html   the page with the stylesheet and its figures inlined, for the host
+
+A page that was renamed keeps its old address: `site/OLD.html` forwards to the new page
+and `docs/OLD.md` points at it.
 
 Files in those directories that the build no longer produces are removed. The output
 depends on `src/` and `tools/` only, so two runs give the same bytes.
@@ -27,11 +30,12 @@ from figures import FIGURES
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERATED = ("docs", "site", "build/artifact")
+STYLE = "src/style.css"
 
 SITE_TITLE = "KServe and Praxis integration"
 SITE_LEDE = (
-    "What changes for a KServe `LLMInferenceService` when the data plane moves "
-    "from Gateway API on Istio to Praxis."
+    "How a KServe `LLMInferenceService` is served when the data plane moves "
+    "from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context."
 )
 
 
@@ -40,16 +44,23 @@ class Page(NamedTuple):
     description: str  # one sentence for the site index
 
 
+# In the order of the navigation.
 PAGES = (
     Page(
-        "ingress-paths",
-        "How a request reaches the model today and with Praxis, what breaks between MaaS and KServe "
-        "when the per-model HTTPRoute goes away, and who should own the `ModelProvider`.",
+        "decision",
+        "The preferred option: `MaaSModelRef` stays the object users write, KServe publishes the backend in "
+        "status, and MaaS writes the routing into the tenant's `Proxy`. What it gains, what it costs and "
+        "what changes in KServe and MaaS.",
     ),
     Page(
-        "cr-relationships",
-        "Which custom resource references which, which one owns which, and which controller writes "
-        "each, today and in three options for routing a model through Praxis.",
+        "alternatives",
+        "The options that were considered and not preferred, with the custom resources of each: which one "
+        "references which, which one owns which, and which controller writes each.",
+    ),
+    Page(
+        "context",
+        "How a request reaches the model today and with Praxis, what the move exposes in the integration "
+        "between MaaS and KServe, and what Praxis supports of Gateway API.",
     ),
     Page(
         "migration",
@@ -58,10 +69,14 @@ PAGES = (
     ),
 )
 
+# Old page name to the page that replaced it.
+REDIRECTS = {"ingress-paths": "decision", "cr-relationships": "alternatives"}
+
 # A link from one page to another is relative in the sources, which is what site/ needs.
 # The Markdown gets the .md name. The fragments under build/artifact/ are hosted one per
 # address, so there the link points at the published site.
 SITE_URL = "https://bartoszmajsak.github.io/kserve-praxis-integration/"
+RAW_URL = "https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/"
 PAGE_LINK = re.compile(r'href="([a-z0-9-]+)\.html"')
 
 PLACEHOLDER = re.compile(r"^([ \t]*)<!-- figure: ([a-z0-9-]+) -->[ \t]*$", flags=re.M)
@@ -69,18 +84,17 @@ BODY = '<div class="page">'
 
 
 class Source(NamedTuple):
-    text: str         # the whole file
+    head: str         # the title, the meta and the font link
     title: str        # as text, entities decoded
     font_links: list
-    css: str          # content of the style block
     body: str         # from the page div on, placeholders included
     body_line: int    # line of the page div in the file
 
 
 def read_source(page):
-    """Split a page source into its parts and check that it is still the fragment the
-    host expects: a title, a font link and one style block in front of the page div,
-    and no document skeleton."""
+    """Split a page source into its parts and check that it is still a fragment: a title
+    and a font link in front of the page div, no style block (the pages share
+    `src/style.css`) and no document skeleton."""
     text = (ROOT / "src" / f"{page.name}.html").read_text(encoding="utf-8")
     require(text.startswith("<title>"), f"{page.name}: the source has to start with <title>")
     require(BODY in text, f"{page.name}: no {BODY}")
@@ -88,75 +102,97 @@ def read_source(page):
     if skeleton:
         raise BuildError(f"{page.name}: the source is a fragment, {skeleton.group(0)} does not belong in it")
     head, body = text.split(BODY, 1)
-    styles = re.findall(r"<style>(.*?)</style>", head, flags=re.S)
-    require(len(styles) == 1, f"{page.name}: expected one <style> block, found {len(styles)}")
+    require("<style" not in text, f"{page.name}: the pages share {STYLE}, a source has no <style> block")
     title = re.match(r"<title>(.*?)</title>", head)
     require(title, f"{page.name}: the <title> is not closed on the first line")
     links = re.findall(r"<link [^>]*>", head)
-    return Source(text, html.unescape(title.group(1)), links, styles[0], BODY + body, head.count("\n") + 1)
+    return Source(head, html.unescape(title.group(1)), links, BODY + body, head.count("\n") + 1)
 
 
 def check_classes(page, figs, css):
-    """Every class a figure uses needs a rule in the diagram CSS of its page."""
+    """Every class a figure uses needs a rule among the diagram rules of the stylesheet."""
     svg = "\n".join(fig.inline() for fig in figs.values())
     used = {c for classes in re.findall(r'class="([^"]+)"', svg) for c in classes.split()}
-    defined = set(re.findall(r"\.([a-z][a-z0-9-]*)", themes.marks_css(page.name, css)))
+    defined = set(re.findall(r"\.([a-z][a-z0-9-]*)", themes.marks_css(css)))
     missing = sorted(used - defined)
-    require(not missing, f"{page.name}: figure classes without a rule in the page CSS: {missing}")
+    require(not missing, f"{page.name}: figure classes without a rule in {STYLE}: {missing}")
+
+
+def portable(markdown):
+    """The Markdown of a page for pasting somewhere else: figures as plain images and
+    links to other pages with their full address."""
+    markdown = re.sub(
+        r'<picture><source [^>]*><img src="(figs/[^"]+)" alt="([^"]*)"></picture>',
+        lambda m: f"![{html.unescape(m.group(2))}]({RAW_URL}{m.group(1)})",
+        markdown,
+    )
+    return re.sub(r"\]\(([a-z0-9-]+)\.md\)", lambda m: f"]({SITE_URL}{m.group(1)}.html)", markdown)
 
 
 def render():
     """Every generated file as {path relative to the output root: content}."""
     out, placed = {}, {}
+    css = (ROOT / STYLE).read_text(encoding="utf-8")
+    themes.check_tokens(css)
+    standalone = {theme: themes.standalone_css(css, theme) for theme in themes.THEMES}
     sources = {page.name: read_source(page) for page in PAGES}
     links = [("index.html", "Overview")] + [(f"{p.name}.html", sources[p.name].title) for p in PAGES]
 
     for page in PAGES:
         src = sources[page.name]
-        themes.check_tokens(page.name, src.css)
 
         figs = {}
-        for _, name in PLACEHOLDER.findall(src.text):
+        for _, name in PLACEHOLDER.findall(src.body):
             require(name in FIGURES, f"{page.name}: no figure named {name} in tools/figures.py")
             require(name not in placed, f"figure {name} is placed twice, the second time in {page.name}")
             placed[name] = page.name
             figs[name] = FIGURES[name].build()
         prefixes = [fig.p for fig in figs.values()]
         require(len(set(prefixes)) == len(prefixes), f"{page.name}: two figures share an id prefix: {prefixes}")
-        check_classes(page, figs, src.css)
+        check_classes(page, figs, css)
 
-        inlined = PLACEHOLDER.sub(lambda m: figs[m.group(2)].inline(m.group(1)), src.text)
-        require("<!-- figure:" not in inlined, f"{page.name}: a figure placeholder has to be on a line of its own")
-
+        body = PLACEHOLDER.sub(lambda m: figs[m.group(2)].inline(m.group(1)), src.body)
+        require("<!-- figure:" not in body, f"{page.name}: a figure placeholder has to be on a line of its own")
         for target in PAGE_LINK.findall(src.body):
             require(target in sources, f"{page.name}: link to {target}.html, which is not a page")
-        out[f"build/artifact/{page.name}.html"] = PAGE_LINK.sub(lambda m: f'href="{SITE_URL}{m.group(1)}.html"', inlined)
-        out[f"site/{page.name}.html"] = site_html.document(
-            src.title, page.description, src.font_links, src.css, inlined[inlined.index(BODY):],
-            links, f"{page.name}.html",
-        )
+
         alt = {name: FIGURES[name].alt for name in figs}
         try:
-            out[f"docs/{page.name}.md"] = html2md.convert(src.body, alt, src.body_line)
+            markdown = html2md.convert(src.body, alt, src.body_line)
         except BuildError as error:
             raise BuildError(f"{page.name}: {error}") from None
+
+        out[f"docs/{page.name}.md"] = markdown
+        out[f"build/artifact/{page.name}.html"] = (
+            f"{src.head.rstrip()}\n<style>\n{css}</style>\n\n"
+            + PAGE_LINK.sub(lambda m: f'href="{SITE_URL}{m.group(1)}.html"', body)
+        )
+        out[f"site/{page.name}.html"] = site_html.document(
+            src.title, page.description, src.font_links, css, body, links, f"{page.name}.html",
+            markdown=portable(markdown),
+        )
         for name, fig in figs.items():
             for theme in themes.THEMES:
                 suffix = "" if theme == "light" else f"-{theme}"
-                css = themes.standalone_css(page.name, src.css, theme)
-                out[f"docs/figs/{name}{suffix}.svg"] = fig.standalone(css, themes.BACKGROUND[theme])
+                out[f"docs/figs/{name}{suffix}.svg"] = fig.standalone(standalone[theme], themes.BACKGROUND[theme])
 
     unplaced = sorted(set(FIGURES) - set(placed))
     require(not unplaced, f"figures without a placeholder in any page: {unplaced}")
 
-    # The index has no source of its own. It borrows the layout rules of the first page.
-    first = sources[PAGES[0].name]
-    layout = first.css[:first.css.index(themes.MARKS)].rstrip() + "\n"
+    # The index has no source of its own and no figure, so it takes the layout rules only.
+    fonts = sources[PAGES[0].name].font_links
+    layout = css[:css.index(themes.MARKS)].rstrip() + "\n"
     entries = [(f"{p.name}.html", sources[p.name].title, p.description) for p in PAGES]
     out["site/index.html"] = site_html.document(
-        SITE_TITLE, SITE_LEDE, first.font_links, layout,
+        SITE_TITLE, SITE_LEDE, fonts, layout,
         site_html.index_body(SITE_TITLE, SITE_LEDE, entries), links, "index.html",
     )
+
+    for old, new in REDIRECTS.items():
+        require(new in sources and old not in sources, f"redirect {old}: the target has to be a page and the old name not")
+        title = sources[new].title
+        out[f"site/{old}.html"] = site_html.redirect(f"{new}.html", title)
+        out[f"docs/{old}.md"] = f"# Moved\n\nThe content is now in [{title}]({new}.md).\n"
     return out
 
 

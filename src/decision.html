@@ -1,0 +1,217 @@
+<title>Praxis decision</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Decision record · Praxis data plane</div>
+  <h1>MaaSModelRef only, ModelProvider later</h1>
+  <p class="lede">Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps <code>MaaSModelRef</code> as the object users write. KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS writes the routing into the <code>Proxy</code> of the tenant. The <code>ModelProvider</code> API can be adopted later.</p>
+</header>
+
+<div class="answers">
+  <div>
+    <span class="q">Status</span>
+    <span class="a">Preferred option</span>
+    <p>It was discussed as option 3. Options 1 and 2 are described in <a href="alternatives.html">Praxis alternatives</a>.</p>
+  </div>
+  <div>
+    <span class="q">Decision</span>
+    <span class="a">MaaS writes the routing into the tenant's Proxy</span>
+    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, and MaaS reads it for each <code>MaaSModelRef</code>. No <code>ModelProvider</code> is created.</p>
+  </div>
+  <div>
+    <span class="q">Next step</span>
+    <span class="a">ModelProvider when its API is defined</span>
+    <p>MaaS then creates one provider per <code>MaaSModelRef</code>. Users and KServe change nothing.</p>
+  </div>
+</div>
+
+<section>
+  <div class="prose">
+    <h2>Context</h2>
+    <p>Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the <code>ModelProvider</code>, and its API is still open (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>). The request path, the problems the move exposes and the state of Praxis are described in <a href="context.html">Praxis context</a>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Decision</h2>
+    <p>We keep <code>MaaSModelRef</code> as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and <code>Ready</code>, with or without a route. MaaS reads that status and writes the routing of each published model into the <code>Proxy</code> of the tenant, next to the policy slot, and <code>gateway-controller</code> renders it. No <code>ModelProvider</code> is created.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <!-- figure: relationships-option-3 -->
+    </div>
+    <figcaption>No object represents the routing of a single model. It is part of the <code>Proxy</code>, which MaaS already writes. The marks are explained in <a href="alternatives.html">Praxis alternatives</a>.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>The user writes the same <code>MaaSModelRef</code> as today. Its spec needs no new field, because the backend, the port and the model names come from the service status. Its <code>httpRoute*</code> status fields have no source without a route.</li>
+          <li>KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and <code>Ready</code> in status. It creates nothing in the tenant namespace and needs no tenant.</li>
+          <li>MaaS reads that status and writes the routing of every published model of a tenant into the tenant's <code>Proxy</code>, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined". MaaS creates the <code>Policy</code> from the subscriptions and the auth policies.</li>
+          <li><code>gateway-controller</code> renders the <code>Proxy</code> and the <code>Policy</code>. It does not need the <code>ModelProvider</code> type, which is not implemented yet (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Benefits</h2>
+    <ul>
+      <li>One contract between MaaS and KServe: the <code>LLMInferenceService</code> status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.</li>
+      <li>One writer per object. MaaS writes every object in the tenant namespace, and KServe writes only next to the service.</li>
+      <li>Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.</li>
+      <li>No dependency on the <code>ModelProvider</code> API. It is open with no milestone, and this option needs the <code>Proxy</code> and the <code>Policy</code> only.</li>
+      <li>Nothing changes in what users and the dashboard write. <code>MaaSModelRef</code> needs no new spec field.</li>
+      <li>Several tenants per service need no extra API. One service can be published to several tenants today, with one <code>MaaSModelRef</code> each.</li>
+      <li>The <code>ModelProvider</code> can be adopted later without a change for users or for KServe, because the contract with KServe and the user-facing objects stay the same.</li>
+      <li>It follows existing practice. MaaS already reads <code>status.router.scheduler.inferencePool</code> and writes an <code>InferenceObjective</code> per pool.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Costs and limits</h2>
+    <ul>
+      <li>In the current draft a routing change rolls the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy (<a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.</li>
+      <li>Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.</li>
+      <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
+      <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>.</li>
+      <li>A service without a <code>MaaSModelRef</code> has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.</li>
+      <li>Stopping or deleting a service removes its pool and its Service immediately. MaaS has to remove the routing entry at the same time.</li>
+      <li>Canary weights need an owner. They are either read from <code>group</code> and <code>weight</code> on the service, or defined in MaaS. We would not add a weight field to <code>MaaSModelRef</code>, because it would compete with the weight of a <code>ModelProvider</code> later.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Adopting the ModelProvider later</h2>
+    <p>The preferred option is the first step towards option 2 in <a href="alternatives.html">Praxis alternatives</a>, where MaaS creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>. The step can be taken when the API is defined and implemented.</p>
+    <ul>
+      <li><code>gateway-controller</code> adds the type, its controller and the routing that is generated from it.</li>
+      <li>MaaS stops writing routing entries into the <code>Proxy</code>, creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>, and hands the routing slot of the tenant to <code>gateway-controller</code>.</li>
+      <li>KServe changes nothing, because the status contract is the same.</li>
+      <li>Users change nothing, because <code>MaaSModelRef</code> stays the object they write. The Praxis design maps it the same way: a <code>MaaSModelRef</code> becomes a <code>Model</code> and a <code>ModelProvider</code> (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L549" target="_blank" rel="noopener"><code>docs/design/api.md:549</code></a>).</li>
+      <li>Which <code>ModelProvider</code> arrives is open. The design in the repository and the proposal describe different fields, and the design leaves weighting and failover out of scope (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387" target="_blank" rel="noopener"><code>docs/design/api-v1alpha1.md:386-387</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Changes in upstream KServe</h2>
+    <p>KServe creates no new objects. It has to publish complete status for a service without a route: today such a service with a scheduler never becomes <code>Ready</code>, and its status does not include the pool. We read this from <a href="https://github.com/kserve/kserve" target="_blank" rel="noopener"><code>kserve/kserve</code></a> master at <a href="https://github.com/kserve/kserve/commit/cdbe9860583e36f29d46a58179d86299e8faa41d" target="_blank" rel="noopener"><code>cdbe986058</code></a>, in the files under <code>pkg/controller/v1alpha2/llmisvc/</code>. The sizes are estimates from reading the code. None of it has been implemented.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Change</th><th>Today</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>Mark a service with a scheduler and no route <code>Ready</code>, and publish its pool in <code>status.router.scheduler</code> with the v1 API group. One PR.</td><td>It stays <code>InferencePoolReady=False</code> with reason <code>WaitingForGateway</code> (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L801" target="_blank" rel="noopener"><code>router.go:801</code></a>, <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L975" target="_blank" rel="noopener"><code>:975</code></a>), and <code>status.router</code> is cleared (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L484" target="_blank" rel="noopener"><code>router.go:484</code></a>). Both changes have to ship together because MaaS interprets "<code>Ready</code> and no pool in status" as a service without a scheduler.</td><td class="num">Small, status only</td></tr>
+        <tr><td>Publish served model names on the address of a service with no route.</td><td><code>status.addresses[].models</code> is filled from gateway URLs only (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router_discovery_filter.go#L90-L157" target="_blank" rel="noopener"><code>router_discovery_filter.go:90-157</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Add the port to that address, and clear <code>status.url</code> when the route is removed.</td><td>The address is the workload Service host with no port, and the Service listens on 8000 (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L493-L500" target="_blank" rel="noopener"><code>router.go:493-500</code></a>). <code>status.url</code> is only written when there is a route (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L545-L550" target="_blank" rel="noopener"><code>router.go:545-550</code></a>), so AFAICT it keeps its old value once the route is removed.</td><td class="num">Small</td></tr>
+        <tr><td>Skip the managed HTTPRoute for a Gateway that opts in, and treat the service as one with no route.</td><td>The route is always rendered when <code>spec.router.route</code> is set. A switch per Gateway has a precedent: <code>serving.kserve.io/model-based-routing-only</code> is read from the parent Gateway (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83" target="_blank" rel="noopener"><code>router.go:83</code></a>).</td><td class="num">Small to medium</td></tr>
+        <tr><td>Optional: allow <code>group</code> and <code>weight</code> without a route.</td><td>They are fields of <code>spec.router.route</code>, released in v0.20.0. Validation, defaults, labels and group status all assume a route. The alternative with no KServe change is weights held by MaaS.</td><td class="num">Medium to large</td></tr>
+        <tr><td>No change for the workload Service.</td><td>It is already in <code>status.workloads.service</code>, and a service with no scheduler and no route is already <code>Ready</code>.</td><td class="num">None</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>Open PR <a href="https://github.com/kserve/kserve/pull/5972" target="_blank" rel="noopener"><code>kserve/kserve#5972</code></a> covers a service with <code>gateway.refs</code> and no route (issue <a href="https://github.com/kserve/kserve/issues/5986" target="_blank" rel="noopener"><code>#5986</code></a>). A service with no route and no refs is not covered.</li>
+      <li>Do not make readiness wait for Praxis. MaaS waits for <code>Ready</code> before it writes the routing entry, which would create a circular dependency.</li>
+      <li>ODH build: reconcile the scheduler before the Kuadrant auth check. Today the check returns first, so with the <code>AuthPolicy</code> CRD gone no EPP is created for a service with auth enabled.</li>
+      <li>ODH build: give strict NetworkPolicy a way to allow the proxy's namespace. Today it takes the allowed namespaces from Gateway references only.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Changes in MaaS</h2>
+    <p>MaaS has the larger share of the work. It derives nearly all model information from the HTTPRoute today, so that dependency has to be removed first. Most rows are needed for any integration with Praxis, and only the last three follow from MaaS writing the routing. This comes from <a href="https://github.com/opendatahub-io/models-as-a-service" target="_blank" rel="noopener"><code>opendatahub-io/models-as-a-service</code></a> at <a href="https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be" target="_blank" rel="noopener"><code>e0afdbc</code></a>, and paths are under <code>maas-controller/pkg/controller/maas/</code> unless they say otherwise.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Change</th><th>Today</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>Read the backend, the port, the model names and <code>Ready</code> from the <code>LLMInferenceService</code> status. Stop looking up the HTTPRoute.</td><td>MaaS finds the route by label and requires the tenant Gateway as its parent (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L45-L115" target="_blank" rel="noopener"><code>providers_llmisvc.go:45-115</code></a>). No route means <code>Pending</code>, "Waiting for HTTPRoute to be created" (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L199-L218" target="_blank" rel="noopener"><code>maasmodelref_controller.go:199-218</code></a>).</td><td class="num">Medium</td></tr>
+        <tr><td>Take a model's endpoint from the tenant's ingress host, and rename the <code>httpRoute*</code> status fields.</td><td>The endpoint comes from route hostnames or Gateway listeners (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L154-L190" target="_blank" rel="noopener"><code>providers_llmisvc.go:154-190</code></a>). <code>maas-api</code> builds the model URL from <code>status.httpRouteHostnames[0]</code> (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-api/internal/models/maasmodelref.go#L127-L132" target="_blank" rel="noopener"><code>maas-api/internal/models/maasmodelref.go:127-132</code></a>).</td><td class="num">Medium, API change</td></tr>
+        <tr><td>Resolve the tenant from the service's <code>gateway.refs</code> when <code>spec.tenantRef</code> is empty.</td><td>It is looked up from the route's parent Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L1087-L1204" target="_blank" rel="noopener"><code>maasmodelref_controller.go:1087-1204</code></a>). The dashboard never sets <code>tenantRef</code>, so it has to stay optional.</td><td class="num">Small</td></tr>
+        <tr><td>Write the <code>InferenceObjective</code> without checking the route.</td><td>It is only written when the model's route is on the tenant Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L396-L408" target="_blank" rel="noopener"><code>maassubscription_inferenceobjective.go:396-408</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Generate per-model token limits that do not attach to a route.</td><td>The rate limit policy targets the HTTPRoute and has it as owner (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_controller.go#L806-L816" target="_blank" rel="noopener"><code>maassubscription_controller.go:806-816</code></a>). Praxis has to support a limit per model first.</td><td class="num">New</td></tr>
+        <tr><td>Generate a Praxis <code>Policy</code> from <code>MaaSAuthPolicy</code>.</td><td>It becomes a Kuadrant <code>AuthPolicy</code> that targets the tenant Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasauthpolicy_controller.go#L1458-L1463" target="_blank" rel="noopener"><code>maasauthpolicy_controller.go:1458-1463</code></a>). Kubernetes token auth waits on <a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a>.</td><td class="num">New</td></tr>
+        <tr><td>Let an <code>AITenant</code> work without a Gateway, and create a <code>Proxy</code> and a <code>Policy</code> for it.</td><td>The tenant is set to <code>Failed</code> when its Gateway check fails (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/aitenant_controller.go#L225-L232" target="_blank" rel="noopener"><code>aitenant_controller.go:225-232</code></a>), and it has no field for a <code>Proxy</code>.</td><td class="num">New</td></tr>
+        <tr><td>Decide where <code>maas-api</code> is served.</td><td>Through the tenant Gateway, by its own HTTPRoute (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/tenant_reconcile.go#L745-L749" target="_blank" rel="noopener"><code>tenant_reconcile.go:745-749</code></a>). Its paths include <code>/maas-api</code>, <code>/v1/models</code> and <code>/v1/api-keys</code>.</td><td class="num">Decision</td></tr>
+        <tr><td>Write a routing entry for each <code>MaaSModelRef</code> into the tenant's <code>Proxy</code>, and remove it when the service stops or is deleted.</td><td>MaaS already does the same for an <code>InferenceObjective</code> per pool (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L177-L250" target="_blank" rel="noopener"><code>maassubscription_inferenceobjective.go:177-250</code></a>). It needs RBAC and a watch for the Praxis types.</td><td class="num">Medium</td></tr>
+        <tr><td>Use the current model ID as the routing key.</td><td><code>ResolveModelAlias</code> takes it from the service's status addresses, or builds <code>publishers/{ns}/models/{name}</code> from the spec (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L330-L348" target="_blank" rel="noopener"><code>providers_llmisvc.go:330-348</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Decide which component owns canary weights.</td><td><code>MaaSModelRef</code> has no weight, and two refs in one tenant with the same model ID are a conflict (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/model_identity_conflict.go#L33-L56" target="_blank" rel="noopener"><code>model_identity_conflict.go:33-56</code></a>).</td><td class="num">Decision, then new</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>MaaS has no Praxis control-plane code today. Nothing in the repository refers to <code>praxis.io</code>.</li>
+      <li>Grid in <a href="https://github.com/opendatahub-io/odh-model-controller" target="_blank" rel="noopener"><code>odh-model-controller</code></a> needs the first change too: it stops publishing a provider when <code>status.router</code> is empty (<a href="https://github.com/opendatahub-io/odh-model-controller/blob/a67a53c9d80915e428ac62c3dbab3e4b38961b00/internal/controller/serving/llm/grid_controller.go#L759-L768" target="_blank" rel="noopener"><code>grid_controller.go:759-768</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Impact on users and the dashboard</h2>
+    <p>The goal is that users and the dashboard notice nothing. While the route and the routing in Praxis exist in parallel, nothing changes for them. The end state needs care, because the dashboard and MaaS both rely on fields that a service without a route would no longer have. Keeping those fields, and letting KServe skip the route for a Gateway that opts in, avoids that.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>What users and the dashboard touch</th><th>Today</th><th>Risk in the end state</th><th>How it stays unchanged</th></tr></thead>
+      <tbody>
+        <tr><td><code>spec.router.route</code> and <code>spec.router.gateway.refs</code> on the service</td><td>The dashboard writes <code>router: {route: {}, gateway: {}}</code> on every new service and adds <code>maas-default-gateway</code> when the user selects MaaS. It decides whether a service is published to MaaS from that reference.</td><td>If the reference is removed, the next edit and save in the dashboard deletes the <code>MaaSModelRef</code>.</td><td>Keep both fields. KServe skips the managed route for a Gateway that opts in.</td></tr>
+        <tr><td><code>spec.tenantRef</code> on <code>MaaSModelRef</code></td><td>The dashboard never sets it, and the MaaS documentation says to omit it. MaaS looks the tenant up from the route's parent Gateway.</td><td>Making the field required breaks what the dashboard creates.</td><td>MaaS resolves the tenant from the service's <code>gateway.refs</code>.</td></tr>
+        <tr><td>Endpoint URL and hostname</td><td>Taken from route hostnames, Gateway listeners or the service status.</td><td>The hostname changes if Praxis is exposed without the tenant Gateway.</td><td>The tenant Gateway stays as the ingress in front of Praxis, and KServe keeps the Gateway host in <code>status.url</code> and <code>status.addresses</code>.</td></tr>
+        <tr><td>Model ID in <code>/v1/models</code></td><td><code>status.resolvedModelAlias</code> of the <code>MaaSModelRef</code>.</td><td>A changed ID breaks clients.</td><td>The routing key equals the alias.</td></tr>
+        <tr><td><code>MaaSSubscription</code> and <code>MaaSAuthPolicy</code></td><td>Written by admins, and turned into Kuadrant policies.</td><td>None in the spec.</td><td>No change. MaaS generates the Praxis <code>Policy</code> from the same objects.</td></tr>
+        <tr><td><code>AITenant.spec.gateway</code></td><td>Names the tenant Gateway.</td><td>None while the Gateway stays.</td><td>No change.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h3>What cannot be hidden</h3>
+    <ul>
+      <li>Per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working unless Praxis serves paths. Setting <code>serving.kserve.io/model-based-routing-only</code> on a Gateway has the same effect for clients today, so it can be used to find affected clients first.</li>
+      <li>The Kuadrant objects disappear, together with the documented <code>kubectl get authpolicy</code> and <code>tokenratelimitpolicy</code> checks and the status fields that list those objects.</li>
+      <li>The <code>HTTPRoute</code> column of <code>MaaSModelRef</code> is empty, and two steps disappear from the progress list in the dashboard.</li>
+      <li>AFAICT rate limit counters restart at the cut-over.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Migration</h2>
+    <p>A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in <a href="migration.html">Praxis migration</a>, which is a work in progress.</p>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The decision is based on reading code, issues and the proposal. The following was not verified.</p>
+    <ul>
+      <li>Nothing was run on a cluster. How services with no route behave is read from code. Two KServe unit tests covering the readiness path were run and pass.</li>
+      <li>That routing can stay MaaS-defined is taken from a remark in the proposal. What an inline filter chain in a <code>Proxy</code> can express was read from the types, and nothing renders it yet.</li>
+      <li>The pod roll on a routing change is read from the draft <a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a> at <a href="https://github.com/praxis-proxy/gateway-controller/commit/aa8180fdf5734289cfdfcfd6efcd6a744e41b485" target="_blank" rel="noopener"><code>aa8180f</code></a>. It was not run, and the draft can change before it merges.</li>
+      <li>The dashboard was read on <code>main</code> at <a href="https://github.com/opendatahub-io/odh-dashboard/tree/16366ea36ccdeb8f4417c9154e724682dd45b73b" target="_blank" rel="noopener"><code>16366ea</code></a>. Its release branches were not read, and nothing was exercised in a browser.</li>
+      <li>The MaaS change list comes from a single read of the code. We rechecked the rows about the route, the rate limit policy, <code>maas-api</code>, the <code>InferenceObjective</code> and the tenant Gateway, and took the rest from the note.</li>
+    </ul>
+  </div>
+</section>
+
+</div>

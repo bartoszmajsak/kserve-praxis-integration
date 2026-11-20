@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KServe and Praxis integration</title>
-<meta name="description" content="What changes for a KServe LLMInferenceService when the data plane moves from Gateway API on Istio to Praxis.">
+<meta name="description" content="How a KServe LLMInferenceService is served when the data plane moves from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context.">
 <script>
   (function () {
     try {
@@ -20,7 +20,7 @@
   [hidden] { display: none !important; }
 </style>
 <style>
-  /* Layout: one reading column, figures and tables may run wider inside their own scrollers. */
+  /* Layout: one reading column. Figures and tables may run wider inside their own scrollers. */
   :root {
     --bg: #f6f7f9;
     --panel: #ffffff;
@@ -31,7 +31,11 @@
     --line-strong: #8492a2;
     --gw: #2459a6;      /* Gateway API path */
     --px: #0b7d60;      /* Praxis path */
-    --warn: #b0401c;    /* the contested or moved piece */
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a problem, or the piece that carries the routing decision */
     --code-bg: #e9edf2;
     --canvas: #eef1f5;
     --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -40,13 +44,15 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
-      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+      --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
       --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
-    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+    --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
     --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
   }
 
@@ -100,6 +106,19 @@
   .yes { color: var(--px); font-weight: 600; }
   .no { color: var(--warn); font-weight: 600; }
   .part { color: var(--muted); font-weight: 600; }
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+  tbody th { font-weight: 600; width: 16%; }
+  .tbl.wide table { min-width: 920px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
 </style>
 <style>
   .site-bar {
@@ -113,12 +132,25 @@
   .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
   .site-bar a:hover { color: var(--fg); }
   .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
-  .theme { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-  .theme label { position: relative; display: block; }
-  .theme input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-  .theme span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
-  .theme input:checked + span { background: var(--code-bg); color: var(--fg); }
-  .site-bar a:focus-visible, .theme input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .switch label { position: relative; display: block; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .switch input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .switch input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .md-view {
+    max-width: 1080px; margin: 0 auto; padding-top: 28px; padding-bottom: 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--sans);
+  }
+  .md-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .md-copy { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .md-copy:hover { background: var(--code-bg); }
+  .md-copy:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .md-status { font-size: 13px; color: var(--muted); }
+  .md-source { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
   .pages a { color: inherit; text-underline-offset: 3px; }
   .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
 </style>
@@ -127,14 +159,17 @@
 <div class="site-bar">
   <nav aria-label="Pages">
     <a href="index.html" aria-current="page">Overview</a>
-    <a href="ingress-paths.html">Praxis ingress paths</a>
-    <a href="cr-relationships.html">Praxis CR relationships</a>
+    <a href="decision.html">Praxis decision</a>
+    <a href="alternatives.html">Praxis alternatives</a>
+    <a href="context.html">Praxis context</a>
     <a href="migration.html">Praxis migration</a>
   </nav>
-  <div class="theme" role="radiogroup" aria-label="Theme" hidden>
-    <label><input type="radio" name="theme" value="system"><span>System</span></label>
-    <label><input type="radio" name="theme" value="light"><span>Light</span></label>
-    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+  <div class="controls">
+    <div class="switch theme" role="radiogroup" aria-label="Theme" hidden>
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
   </div>
 </div>
 
@@ -142,17 +177,21 @@
 
 <header class="prose">
   <h1>KServe and Praxis integration</h1>
-  <p class="lede">What changes for a KServe <code>LLMInferenceService</code> when the data plane moves from Gateway API on Istio to Praxis.</p>
+  <p class="lede">How a KServe <code>LLMInferenceService</code> is served when the data plane moves from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context.</p>
 </header>
 
 <section class="pages">
   <div class="prose">
-    <h2><a href="ingress-paths.html">Praxis ingress paths</a></h2>
-    <p>How a request reaches the model today and with Praxis, what breaks between MaaS and KServe when the per-model HTTPRoute goes away, and who should own the <code>ModelProvider</code>.</p>
+    <h2><a href="decision.html">Praxis decision</a></h2>
+    <p>The preferred option: <code>MaaSModelRef</code> stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's <code>Proxy</code>. What it gains, what it costs and what changes in KServe and MaaS.</p>
   </div>
   <div class="prose">
-    <h2><a href="cr-relationships.html">Praxis CR relationships</a></h2>
-    <p>Which custom resource references which, which one owns which, and which controller writes each, today and in three options for routing a model through Praxis.</p>
+    <h2><a href="alternatives.html">Praxis alternatives</a></h2>
+    <p>The options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.</p>
+  </div>
+  <div class="prose">
+    <h2><a href="context.html">Praxis context</a></h2>
+    <p>How a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.</p>
   </div>
   <div class="prose">
     <h2><a href="migration.html">Praxis migration</a></h2>

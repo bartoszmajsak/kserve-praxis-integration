@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praxis context</title>
+<meta name="description" content="How a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column. Figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a problem, or the piece that carries the routing decision */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+      --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+    --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+  tbody th { font-weight: 600; width: 16%; }
+  .tbl.wide table { min-width: 920px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
+
+  /* diagram marks: tiles with a header strip, dashed groups and lanes with a tab, ownership rails, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
+  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
+  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
+  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
+  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-ico { color: var(--muted); }
+  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
+  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
+  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
+  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.px { stroke: var(--px); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
+  .d-rule { stroke: var(--line); stroke-width: 1; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+  .d-tile-b.ks { stroke: var(--ks); stroke-width: 1.6; }
+  .d-tile-b.maas { stroke: var(--maas); stroke-width: 1.6; }
+  .d-tile-b.gc { stroke: var(--gc); stroke-width: 1.6; }
+  .d-tile-b.agc { stroke: var(--agc); stroke-width: 1.6; }
+  .d-head.ks { fill: color-mix(in srgb, var(--ks) 13%, var(--panel)); }
+  .d-head.maas { fill: color-mix(in srgb, var(--maas) 13%, var(--panel)); }
+  .d-head.gc { fill: color-mix(in srgb, var(--gc) 13%, var(--panel)); }
+  .d-head.agc { fill: color-mix(in srgb, var(--agc) 15%, var(--panel)); }
+  .d-kind.ks { fill: var(--ks); } .d-kind.maas { fill: var(--maas); }
+  .d-kind.gc { fill: var(--gc); } .d-kind.agc { fill: var(--agc); }
+  .d-pill.maas { stroke: var(--maas); }
+  .d-pillt.maas { fill: var(--maas); }
+  .d-edge.maas { stroke: var(--maas); stroke-width: 2; }
+  .d-ah.maas { fill: var(--maas); }
+  .d-rail { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .d-rail.warn { stroke: var(--warn); stroke-width: 2; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .switch label { position: relative; display: block; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .switch input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .switch input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .md-view {
+    max-width: 1080px; margin: 0 auto; padding-top: 28px; padding-bottom: 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--sans);
+  }
+  .md-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .md-copy { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .md-copy:hover { background: var(--code-bg); }
+  .md-copy:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .md-status { font-size: 13px; color: var(--muted); }
+  .md-source { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html">Overview</a>
+    <a href="decision.html">Praxis decision</a>
+    <a href="alternatives.html">Praxis alternatives</a>
+    <a href="context.html" aria-current="page">Praxis context</a>
+    <a href="migration.html">Praxis migration</a>
+  </nav>
+  <div class="controls">
+    <div class="switch view" role="radiogroup" aria-label="View" hidden>
+      <label><input type="radio" name="view" value="page"><span>Page</span></label>
+      <label><input type="radio" name="view" value="markdown"><span>Markdown</span></label>
+    </div>
+    <div class="switch theme" role="radiogroup" aria-label="Theme" hidden>
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Praxis data plane · repositories read 2026-11-19</div>
+  <h1>Context</h1>
+  <p class="lede">Moving the data plane from Gateway API on Istio to Praxis changes how a KServe <code>LLMInferenceService</code> receives traffic. The move exposes problems in the integration between MaaS and KServe. A status contract on the <code>LLMInferenceService</code>, with MaaS as the owner of the routing, can help in the overall migration process.</p>
+</header>
+
+<div class="answers">
+  <div>
+    <span class="q">Problem</span>
+    <span class="a">MaaS and KServe integrate through the HTTPRoute</span>
+    <p>MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route.</p>
+  </div>
+  <div>
+    <span class="q">What can help</span>
+    <span class="a">A status contract, and MaaS writes the routing</span>
+    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, with or without a route. MaaS writes the routing into the tenant's <code>Proxy</code> from it. The details are in <a href="decision.html">Praxis decision</a>.</p>
+  </div>
+  <div>
+    <span class="q">Migration</span>
+    <span class="a">In stages, per tenant</span>
+    <p>MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis.</p>
+  </div>
+</div>
+
+<section>
+  <div class="prose">
+    <h2>Praxis in the request path</h2>
+    <p>Despite its name, <a href="https://github.com/praxis-proxy/gateway-controller" target="_blank" rel="noopener"><code>gateway-controller</code></a> is not an ingress controller. It configures a Praxis proxy that is deployed behind the platform's existing ingress. According to the proposal, that ingress ("any GWAPI provider, or none") "just forwards to it".</p>
+    <ul>
+      <li>A Gateway can still be the entry point and forward all traffic to Praxis. The per-model HTTPRoute is removed. Praxis routes on the <code>model</code> field of the request body, and "no route is ever written" (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311" target="_blank" rel="noopener"><code>docs/design/api.md:311</code></a>).</li>
+      <li>On <code>main</code> (<a href="https://github.com/praxis-proxy/gateway-controller/commit/f6a12554d9294130010ed16abea775657914bb6f" target="_blank" rel="noopener"><code>f6a1255</code></a>) the controller has four status-only reconcilers: <code>Proxy</code>, <code>Policy</code>, <code>Tenant</code>, <code>AIGateway</code>. It has no Gateway API dependency, and nothing in it deploys or exposes a proxy yet. The <code>ModelProvider</code> API is still an open issue too (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</li>
+      <li>The <code>ModelProvider</code> API is not settled. The proposal and the design docs in the repository describe different fields, and neither type exists in code.</li>
+    </ul>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 572" role="img" aria-label="Request path today and with Praxis, as stacks of layers. Today the request goes through an Istio Gateway that stacks payload processing, Kuadrant, a per-model HTTPRoute and an ext_proc filter. In the target setup the platform ingress only forwards to a Praxis proxy that stacks a policy slot and a routing slot. The per-model routing decision moves from the HTTPRoute to the routing slot.">
+        <defs>
+        <marker id="f1-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f1-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f1-ah-px" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah px" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="f1-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        <symbol id="f1-i-hex" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l6 3.5v7L9 16l-6-3.5v-7z"/><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="f1-i-shield" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5.5 2v4.6c0 3.3-2.3 5.9-5.5 7.4-3.2-1.5-5.5-4.1-5.5-7.4V4z"/><path d="M6.6 9l1.7 1.7 3.2-3.4"/></symbol>
+        <symbol id="f1-i-route" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="13.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="13.5" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 11.5V10c0-2 1.3-3 3.3-3h2.4c1.4 0 2.3-.4 2.9-1.1"/></symbol>
+        <symbol id="f1-i-pool" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="8.5" height="8.5" rx="1.5"/><path d="M6.5 6V4.5A1.5 1.5 0 0 1 8 3h5.5A1.5 1.5 0 0 1 15 4.5V10a1.5 1.5 0 0 1-1.5 1.5h-2"/></symbol>
+        <symbol id="f1-i-cr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="13" height="13" rx="2.5"/><text x="9" y="11.6" text-anchor="middle" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">CR</text></symbol>
+        <symbol id="f1-i-ext" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></symbol>
+        <symbol id="f1-i-ctrl" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a5 5 0 1 1-1.7-3.75"/><path d="M12.6 2.6v2.9H9.7"/></symbol>
+        </defs>
+        <rect class="d-grp px" x="548" y="190" width="476" height="192" rx="12"/>
+        <rect class="d-grp gw" x="16" y="104" width="476" height="278" rx="12"/>
+        <polyline class="d-edge " points="254.0,72 254.0,104" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge " points="786.0,72 786.0,104" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge " points="786.0,158 786.0,190" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge warn dash" points="480,279 520,279 520,327 560,327" marker-end="url(#f1-ah-warn)"/>
+        <polyline class="d-edge " points="101,382 101,436" marker-start="url(#f1-ah)" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge " points="354,382 354,436" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge " points="633,382 633,436" marker-start="url(#f1-ah)" marker-end="url(#f1-ah)"/>
+        <polyline class="d-edge " points="886,382 886,436" marker-end="url(#f1-ah)"/>
+        <text class="d-title gw" x="16" y="20">TODAY: GATEWAY API ON ISTIO</text>
+        <rect class="d-tile" x="194.0" y="36" width="120" height="36" rx="8" filter="url(#f1-sh)"/>
+        <rect class="d-tile-b" x="194.0" y="36" width="120" height="36" rx="8"/>
+        <text class="d-t" x="254.0" y="58.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="30" y="94" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="110.5" y="108" text-anchor="middle">Gateway (Envoy, Istio)</text>
+        <rect class="d-tile" x="28" y="128" width="452" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M28.6 152V136Q28.6 128.6 36 128.6H472Q479.4 128.6 479.4 136V152Z"/>
+        <rect class="d-tile-b " x="28" y="128" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-ext" x="36" y="131" width="18" height="18"/>
+        <text class="d-kind " x="60" y="144.5">Payload processing</text>
+        <text class="d-own" x="470" y="144" text-anchor="end">MaaS gateways only</text>
+        <text class="d-s" x="40" y="170">praxis-extproc as an ext_proc server, before and after Kuadrant</text>
+        <rect class="d-tile" x="28" y="190" width="452" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M28.6 214V198Q28.6 190.6 36 190.6H472Q479.4 190.6 479.4 198V214Z"/>
+        <rect class="d-tile-b " x="28" y="190" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-shield" x="36" y="193" width="18" height="18"/>
+        <text class="d-kind " x="60" y="206.5">Kuadrant</text>
+        <text class="d-own" x="470" y="206" text-anchor="end">MaaS writes the policies</text>
+        <text class="d-s" x="40" y="232">Authorino for auth, Limitador for token limits per HTTPRoute</text>
+        <rect class="d-tile" x="28" y="252" width="452" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head warn" d="M28.6 276V260Q28.6 252.6 36 252.6H472Q479.4 252.6 479.4 260V276Z"/>
+        <rect class="d-tile-b warn" x="28" y="252" width="452" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f1-i-route" x="36" y="255" width="18" height="18"/>
+        <text class="d-kind warn" x="60" y="268.5">HTTPRoute, one per model</text>
+        <text class="d-own" x="470" y="268" text-anchor="end">KServe writes it</text>
+        <text class="d-s" x="40" y="294">path, header and weight, to a pool or a Service</text>
+        <rect class="d-tile" x="28" y="314" width="452" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M28.6 338V322Q28.6 314.6 36 314.6H472Q479.4 314.6 479.4 322V338Z"/>
+        <rect class="d-tile-b " x="28" y="314" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-ext" x="36" y="317" width="18" height="18"/>
+        <text class="d-kind " x="60" y="330.5">ext_proc filter</text>
+        <text class="d-own" x="470" y="330" text-anchor="end">per rule that targets a pool</text>
+        <text class="d-s" x="40" y="356">asks the EPP which pod to use</text>
+        <text class="d-title px" x="548" y="20">WITH PRAXIS: PROXY BEHIND THE PLATFORM INGRESS</text>
+        <rect class="d-tile" x="726.0" y="36" width="120" height="36" rx="8" filter="url(#f1-sh)"/>
+        <rect class="d-tile-b" x="726.0" y="36" width="120" height="36" rx="8"/>
+        <text class="d-t" x="786.0" y="58.5" text-anchor="middle">Client</text>
+        <rect class="d-tile" x="560" y="104" width="452" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M560.6 128V112Q560.6 104.6 568 104.6H1004Q1011.4 104.6 1011.4 112V128Z"/>
+        <rect class="d-tile-b " x="560" y="104" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-hex" x="568" y="107" width="18" height="18"/>
+        <text class="d-kind " x="592" y="120.5">Platform ingress</text>
+        <text class="d-own" x="1002" y="120" text-anchor="end">forwards only</text>
+        <text class="d-s" x="572" y="146">any Gateway API provider, or a LoadBalancer Service</text>
+        <rect class="d-tab px" x="562" y="180" width="198" height="20" rx="5"/>
+        <text class="d-tabt" x="661.0" y="194" text-anchor="middle">Praxis proxy, one per tenant</text>
+        <rect class="d-tile" x="560" y="214" width="452" height="70" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M560.6 238V222Q560.6 214.6 568 214.6H1004Q1011.4 214.6 1011.4 222V238Z"/>
+        <rect class="d-tile-b " x="560" y="214" width="452" height="70" rx="8"/>
+        <use class="d-ico " href="#f1-i-shield" x="568" y="217" width="18" height="18"/>
+        <text class="d-kind " x="592" y="230.5">Policy slot (PPE)</text>
+        <text class="d-own" x="1002" y="230" text-anchor="end">MaaS creates the Policy</text>
+        <text class="d-s" x="572" y="256">auth and token limits</text>
+        <text class="d-s" x="572" y="272">rendered by gateway-controller into the policy filter</text>
+        <rect class="d-tile" x="560" y="292" width="452" height="70" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head warn" d="M560.6 316V300Q560.6 292.6 568 292.6H1004Q1011.4 292.6 1011.4 300V316Z"/>
+        <rect class="d-tile-b warn" x="560" y="292" width="452" height="70" rx="8"/>
+        <use class="d-ico warn" href="#f1-i-route" x="568" y="295" width="18" height="18"/>
+        <text class="d-kind warn" x="592" y="308.5">Routing slot</text>
+        <text class="d-own" x="1002" y="308" text-anchor="end">MaaS writes it</text>
+        <text class="d-s" x="572" y="334">pick by published model name</text>
+        <text class="d-s" x="572" y="350">then the EPP call, over ext_proc</text>
+        <rect class="d-pill warn" x="497.0" y="294" width="46" height="18" rx="9"/>
+        <text class="d-pillt warn" x="520" y="306.6" text-anchor="middle">moves</text>
+        <rect class="d-pill " x="69.5" y="400" width="63" height="18" rx="9"/>
+        <text class="d-pillt " x="101" y="412.6" text-anchor="middle">ext_proc</text>
+        <rect class="d-pill " x="252.5" y="400" width="203" height="18" rx="9"/>
+        <text class="d-pillt " x="354" y="412.6" text-anchor="middle">to the picked pod, or the Service</text>
+        <rect class="d-tile" x="16" y="436" width="170" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M16.6 460V444Q16.6 436.6 24 436.6H178Q185.4 436.6 185.4 444V460Z"/>
+        <rect class="d-tile-b " x="16" y="436" width="170" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-ext" x="24" y="439" width="18" height="18"/>
+        <text class="d-kind " x="48" y="452.5">EPP</text>
+        <text class="d-own" x="176" y="452" text-anchor="end">KServe</text>
+        <text class="d-s" x="28" y="478">picks the pod</text>
+        <rect class="d-tile" x="216" y="436" width="276" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M216.6 460V444Q216.6 436.6 224 436.6H484Q491.4 436.6 491.4 444V460Z"/>
+        <rect class="d-tile-b " x="216" y="436" width="276" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-pool" x="224" y="439" width="18" height="18"/>
+        <text class="d-kind " x="248" y="452.5">vLLM pods</text>
+        <text class="d-own" x="482" y="452" text-anchor="end">created by KServe</text>
+        <text class="d-s" x="228" y="478">behind an InferencePool or a Service</text>
+        <rect class="d-pill " x="601.5" y="400" width="63" height="18" rx="9"/>
+        <text class="d-pillt " x="633" y="412.6" text-anchor="middle">ext_proc</text>
+        <rect class="d-pill " x="829.5" y="400" width="113" height="18" rx="9"/>
+        <text class="d-pillt " x="886" y="412.6" text-anchor="middle">to the picked pod</text>
+        <rect class="d-tile" x="548" y="436" width="170" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M548.6 460V444Q548.6 436.6 556 436.6H710Q717.4 436.6 717.4 444V460Z"/>
+        <rect class="d-tile-b " x="548" y="436" width="170" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-ext" x="556" y="439" width="18" height="18"/>
+        <text class="d-kind " x="580" y="452.5">EPP</text>
+        <text class="d-own" x="708" y="452" text-anchor="end">KServe</text>
+        <text class="d-s" x="560" y="478">picks the pod</text>
+        <rect class="d-tile" x="748" y="436" width="276" height="54" rx="8" filter="url(#f1-sh)"/>
+        <path class="d-head " d="M748.6 460V444Q748.6 436.6 756 436.6H1016Q1023.4 436.6 1023.4 444V460Z"/>
+        <rect class="d-tile-b " x="748" y="436" width="276" height="54" rx="8"/>
+        <use class="d-ico " href="#f1-i-pool" x="756" y="439" width="18" height="18"/>
+        <text class="d-kind " x="780" y="452.5">vLLM pods</text>
+        <text class="d-own" x="1014" y="452" text-anchor="end">created by KServe</text>
+        <text class="d-s" x="760" y="478">behind an InferencePool or a Service</text>
+        <rect class="d-legend" x="16" y="506" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="516.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b warn" x="32" y="516.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="525.8">carries the per-model routing decision</text>
+        <line class="d-edge " x1="308.20000000000005" y1="522.0" x2="338.20000000000005" y2="522.0" marker-end="url(#f1-ah)"/>
+        <text class="d-lg" x="346.20000000000005" y="525.8">request</text>
+        <line class="d-edge warn dash" x1="413.50000000000006" y1="522.0" x2="443.50000000000006" y2="522.0" marker-end="url(#f1-ah-warn)"/>
+        <text class="d-lg" x="451.50000000000006" y="525.8">where that decision moves</text>
+        <rect class="d-grp " x="625.0" y="516.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="651.0" y="525.8">one proxy and the layers inside it</text>
+        <text class="d-lg" x="32" y="547.8">label on the right of a tile: who writes it, or where it applies</text>
+      </svg>
+    </div>
+    <figcaption>Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writes it and Istio answers with status. With Praxis it is proxy configuration keyed on the model name, and the ingress only forwards. The EPP and the pods are the same in both columns.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Today: who does what, and why</h3>
+        <ul>
+          <li>KServe writes the HTTPRoute, the <code>InferencePool</code>, the EPP and the Service. The route exposes the service, and KServe derives <code>Ready</code> and the URL from the route status.</li>
+          <li>MaaS writes the <code>AuthPolicy</code> on the Gateway and a token rate limit policy on each model's HTTPRoute. Kuadrant enforces by attaching to Gateway API objects, so a per-model limit needs a per-model route.</li>
+          <li>Istio implements the Gateway. It adds the <code>ext_proc</code> filter for rules that target a pool, and it writes the route and pool status.</li>
+          <li>On MaaS tenant gateways <code>praxis-extproc</code> runs as an <code>ext_proc</code> server around Kuadrant. It reads the model name from the request body, among other payload processing.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>With Praxis: who does what, and why</h3>
+        <ul>
+          <li>The platform ingress only forwards. The proxy is not tied to any Gateway API implementation.</li>
+          <li>MaaS creates a <code>Proxy</code> and a <code>Policy</code> per tenant. The <code>Policy</code> is a separate object so MaaS can delegate edit access without exposing the <code>Proxy</code>.</li>
+          <li><code>gateway-controller</code> renders the Praxis config from the <code>Proxy</code> and the <code>Policy</code>. In the Praxis design a <code>ModelProvider</code> per model also feeds the routing, and its API is still open. The rendered config has exactly one owner.</li>
+          <li>KServe still creates the EPP, the pool, the Service and the pods. Scheduling stays with the EPP.</li>
+          <li>Nothing writes status back to the <code>LLMInferenceService</code>. KServe readiness reads route and pool status today, so that has to change.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Problems in today's integration</h2>
+    <p>MaaS and KServe integrate through the HTTPRoute today. MaaS looks up the route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while a route exists. Praxis removes the per-model route, so the move exposes the items below. Each of them needs a solution before a service can be served through Praxis.</p>
+    <h3>Between MaaS and KServe</h3>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Shortcoming</th><th>What it causes</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>MaaS reads KServe's HTTPRoute. There is no single contract on the <code>LLMInferenceService</code> status.</td><td>MaaS finds the route by label, checks its parent Gateway and takes the hostname from it. 42 places in the MaaS code depend on an HTTPRoute or a Gateway. Without the route a <code>MaaSModelRef</code> becomes <code>Pending</code> although the service is <code>Ready</code>.</td><td>MaaS reads the backend, the port, the model names and <code>Ready</code> from the service status, and nothing else.</td></tr>
+        <tr><td>KServe only publishes that status when a route exists.</td><td>Without a route <code>status.router</code> is empty, the address has no port and no model names, and a service with a scheduler never becomes <code>Ready</code>.</td><td>KServe publishes the same status with or without a route.</td></tr>
+        <tr><td>A MaaS policy is owned by a KServe object.</td><td>The per-model rate limit policy targets the HTTPRoute and has it as owner. Deleting the route deletes the limit.</td><td>MaaS generates per-model limits that do not attach to a route. This needs Praxis support first (<a href="https://github.com/praxis-proxy/policy/issues/352" target="_blank" rel="noopener"><code>policy#352</code></a>, <a href="https://github.com/praxis-proxy/policy/issues/308" target="_blank" rel="noopener"><code>policy#308</code></a>, or the <code>token_rate_limit</code> filter).</td></tr>
+        <tr><td>Tenant identity is bound to a Gateway.</td><td>An <code>AITenant</code> fails without a Gateway, and a model's tenant is looked up from its route's parent Gateway. The proposal allows an ingress with no Gateway API.</td><td>Keep the Gateway as the tenant's entry point, resolve the tenant from the service's <code>gateway.refs</code>, and point an <code>AITenant</code> at a <code>Proxy</code>. An ingress without Gateway API would need <code>spec.tenantRef</code>.</td></tr>
+        <tr><td>The model ID is only published on gateway addresses.</td><td>The ID clients send is a contract. MaaS takes it from <code>status.addresses[].models</code>, which KServe fills from gateway URLs only. Without a route MaaS rebuilds it from the spec, and AFAICT that misses a name set through a <code>baseRef</code> and LoRA adapter names.</td><td>KServe publishes served model names without a route. MaaS uses them as the routing key.</td></tr>
+        <tr><td>Canary weights only exist on a route.</td><td><code>group</code> and <code>weight</code> are fields of <code>spec.router.route</code>, and their status needs a route. <code>MaaSModelRef</code> has no weight. A service without a route cannot take part in a canary.</td><td>Either KServe allows <code>group</code> and <code>weight</code> without a route, or MaaS holds the weights.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h3>In Praxis</h3>
+    <p>The migration also depends on work in Praxis that is still open. It is outside our control.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Shortcoming</th><th>What it causes</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>The EPP client does not cover the endpoint picker protocol.</td><td>It rejects the EPP's list of fallback endpoints, never reports which pod served the request and does not send response bodies to the EPP. AFAICT it has no TLS. It is off in published builds. No issue tracks any of this, and <a href="https://github.com/praxis-proxy/ai/issues/165" target="_blank" rel="noopener"><code>ai#165</code></a> is closed as completed.</td><td>File the issues under <a href="https://github.com/praxis-proxy/gateway-controller/issues/24" target="_blank" rel="noopener"><code>gateway-controller#24</code></a>, and test against the real EPP with KServe's presets.</td></tr>
+        <tr><td>The policy engine cannot replace Kuadrant for MaaS yet.</td><td>No Kubernetes token auth (<a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a>), no limit per model (<a href="https://github.com/praxis-proxy/policy/issues/352" target="_blank" rel="noopener"><code>policy#352</code></a>), counters per replica (<a href="https://github.com/praxis-proxy/policy/issues/127" target="_blank" rel="noopener"><code>policy#127</code></a>), and the FIPS image is built without the policy filter. The MaaS team's own POC lists these.</td><td>Track those four, and decide whether token limits are enforced by the policy engine or by the <code>token_rate_limit</code> filter.</td></tr>
+        <tr><td>The control plane is not built.</td><td><code>gateway-controller</code> has no <code>ModelProvider</code> type and does not render or deploy a proxy yet (<a href="https://github.com/praxis-proxy/gateway-controller/issues/14" target="_blank" rel="noopener"><code>#14</code></a> to <a href="https://github.com/praxis-proxy/gateway-controller/issues/17" target="_blank" rel="noopener"><code>#17</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</td><td>No action on our side. Track it. The <a href="https://github.com/praxis-proxy/gateway-controller/milestone/1" target="_blank" rel="noopener"><code>v1.0.0</code> milestone</a> is due 2027-01-20.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Gateway API support in Praxis</h2>
+    <p>We checked whether Praxis has a Gateway API implementation that could serve the HTTPRoute KServe already generates. It does not have one we can rely on. The only Gateway API code is in the Rust <a href="https://github.com/praxis-proxy/operator" target="_blank" rel="noopener"><code>operator</code></a>, and new work happens in <code>gateway-controller</code>: rendering the Praxis config and deploying the proxy are tracked there (<a href="https://github.com/praxis-proxy/gateway-controller/issues/14" target="_blank" rel="noopener"><code>#14</code></a> to <a href="https://github.com/praxis-proxy/gateway-controller/issues/17" target="_blank" rel="noopener"><code>#17</code></a>). The design also rules out a separate Gateway API controller next to it, because the Gateway API implementation "must therefore be the same controller that implements the Praxis Core API" (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md#12-stance-on-gateway-api" target="_blank" rel="noopener"><code>api.md</code>, section 12</a>). <code>gateway-controller</code> has no Gateway API code, and none of its <a href="https://github.com/praxis-proxy/gateway-controller/issues" target="_blank" rel="noopener">49 open issues</a> is about it.</p>
+    <p>The operator also cannot serve the HTTPRoute that KServe generates. It passes Gateway API HTTP conformance, core and extended, but thirteen of the sixteen rules in <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/config/llmisvcconfig/config-llm-router-route.yaml" target="_blank" rel="noopener">KServe's route preset</a> point at an <code>InferencePool</code>, and the operator accepts <code>core/Service</code> only (<a href="https://github.com/praxis-proxy/operator/blob/1a9f9d57cd6bf5362291bcf9e1655770747224a3/src/gateway_api/route_status.rs#L142-L148" target="_blank" rel="noopener"><code>src/gateway_api/route_status.rs:142-148</code></a> at <a href="https://github.com/praxis-proxy/operator/commit/1a9f9d57cd6bf5362291bcf9e1655770747224a3" target="_blank" rel="noopener"><code>1a9f9d5</code></a>).</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>KServe's route preset uses</th><th>Praxis operator (being replaced)</th><th>AI Gateway API (design)</th></tr></thead>
+      <tbody>
+        <tr><td>Path and header matches</td><td class="yes">Yes, prefix and exact</td><td class="no">No surface, routes on body <code>model</code></td></tr>
+        <tr><td>Prefix rewrite, 14 of 16 rules</td><td class="yes">Yes</td><td class="no">None</td></tr>
+        <tr><td>Weighted backendRefs</td><td class="yes">Yes</td><td class="part">On <code>Model.providers[]</code>, out of v1alpha1 scope</td></tr>
+        <tr><td>Request timeout, 4 rules at 600s</td><td class="part">Partial</td><td class="no">None</td></tr>
+        <tr><td><code>InferencePool</code> backendRef, 13 of 16 rules</td><td class="no">No: <code>InvalidKind</code>, generated 500</td><td class="no">Not in the design, only in <a href="https://github.com/praxis-proxy/gateway-controller/pull/26" target="_blank" rel="noopener">PR #26</a></td></tr>
+        <tr><td><code>Service</code> backendRef, 3 rules</td><td class="yes">Yes, plaintext upstream only</td><td class="yes"><code>backend.serviceRef</code></td></tr>
+        <tr><td>Pool parent status for readiness</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>TLS to pods and to the EPP</td><td class="no">Core supports upstream TLS, operator does not emit it</td><td class="no">Unspecified</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>The operator has no tags, no releases and no users in the demos. A maintainer wrote on 2026-11-13 that they are "considering archiving" it once <code>gateway-controller</code> covers conformance.</li>
+      <li>No HTTPRoute support is being built for Praxis today. The AI Gateway API has no Gateway API dependency by design. Gateway API support is only mentioned as something for later ("When we implement GWAPI for praxis", <a href="https://github.com/praxis-proxy/policy/issues/104#issuecomment-6942155676" target="_blank" rel="noopener"><code>policy#104</code></a>, 2026-11-17), with no issue and no date.</li>
+      <li>The HTTPRoute does not need translating. Most of it is specific to Gateway API. Five pieces of information have to be passed on, and only KServe has them: the backend (pool or Service, name, port), served model names including LoRA adapters, backend TLS and its trust anchor, lifecycle (ready, stopped, deleting), and <code>group</code> and <code>weight</code> if the service stays the canary API.</li>
+      <li>Not available unless Praxis implements them: the catch-all rules that send non-inference paths such as <code>/v1/models</code> to the Service, and the unlimited request timeout.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The findings are based on reading code, issues and the proposal. The following was not verified.</p>
+    <ul>
+      <li>Nothing was run on a cluster. What the operator does with KServe's route is read from code.</li>
+      <li>Whether <a href="https://github.com/praxis-proxy/gateway-controller/pull/26" target="_blank" rel="noopener">PR #26</a> on <code>gateway-controller</code> is still the intent. It was last pushed on 2026-11-12 and is unapproved. The pivot to the current proposal is not in any public thread.</li>
+      <li>How the proxy is deployed. <code>gateway-controller</code> has open issues for the <code>Proxy</code> ConfigMap, Deployment and Service (<a href="https://github.com/praxis-proxy/gateway-controller/issues/15" target="_blank" rel="noopener"><code>#15</code></a> to <a href="https://github.com/praxis-proxy/gateway-controller/issues/17" target="_blank" rel="noopener"><code>#17</code></a>) and nothing merged.</li>
+      <li>That the Praxis <code>ext_proc</code> client cannot do TLS. This is inferred from its config and dependencies.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<div class="md-view" hidden>
+  <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
+  <pre class="md-source" tabindex="0"># Context
+
+Praxis data plane, repositories read 2026-11-19.
+
+Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `LLMInferenceService` receives traffic. The move exposes problems in the integration between MaaS and KServe. A status contract on the `LLMInferenceService`, with MaaS as the owner of the routing, can help in the overall migration process.
+
+| Topic | Summary | Detail |
+|---|---|---|
+| Problem | MaaS and KServe integrate through the HTTPRoute | MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route. |
+| What can help | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. The details are in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html). |
+| Migration | In stages, per tenant | MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis. |
+
+## Praxis in the request path
+
+Despite its name, [`gateway-controller`](https://github.com/praxis-proxy/gateway-controller) is not an ingress controller. It configures a Praxis proxy that is deployed behind the platform's existing ingress. According to the proposal, that ingress ("any GWAPI provider, or none") "just forwards to it".
+
+- A Gateway can still be the entry point and forward all traffic to Praxis. The per-model HTTPRoute is removed. Praxis routes on the `model` field of the request body, and "no route is ever written" ([`docs/design/api.md:311`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311)).
+- On `main` ([`f6a1255`](https://github.com/praxis-proxy/gateway-controller/commit/f6a12554d9294130010ed16abea775657914bb6f)) the controller has four status-only reconcilers: `Proxy`, `Policy`, `Tenant`, `AIGateway`. It has no Gateway API dependency, and nothing in it deploys or exposes a proxy yet. The `ModelProvider` API is still an open issue too ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)).
+- The `ModelProvider` API is not settled. The proposal and the design docs in the repository describe different fields, and neither type exists in code.
+
+![Request path today and with Praxis](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/request-path.svg)
+
+Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writes it and Istio answers with status. With Praxis it is proxy configuration keyed on the model name, and the ingress only forwards. The EPP and the pods are the same in both columns.
+
+### Today: who does what, and why
+
+- KServe writes the HTTPRoute, the `InferencePool`, the EPP and the Service. The route exposes the service, and KServe derives `Ready` and the URL from the route status.
+- MaaS writes the `AuthPolicy` on the Gateway and a token rate limit policy on each model's HTTPRoute. Kuadrant enforces by attaching to Gateway API objects, so a per-model limit needs a per-model route.
+- Istio implements the Gateway. It adds the `ext_proc` filter for rules that target a pool, and it writes the route and pool status.
+- On MaaS tenant gateways `praxis-extproc` runs as an `ext_proc` server around Kuadrant. It reads the model name from the request body, among other payload processing.
+
+### With Praxis: who does what, and why
+
+- The platform ingress only forwards. The proxy is not tied to any Gateway API implementation.
+- MaaS creates a `Proxy` and a `Policy` per tenant. The `Policy` is a separate object so MaaS can delegate edit access without exposing the `Proxy`.
+- `gateway-controller` renders the Praxis config from the `Proxy` and the `Policy`. In the Praxis design a `ModelProvider` per model also feeds the routing, and its API is still open. The rendered config has exactly one owner.
+- KServe still creates the EPP, the pool, the Service and the pods. Scheduling stays with the EPP.
+- Nothing writes status back to the `LLMInferenceService`. KServe readiness reads route and pool status today, so that has to change.
+
+## Problems in today's integration
+
+MaaS and KServe integrate through the HTTPRoute today. MaaS looks up the route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while a route exists. Praxis removes the per-model route, so the move exposes the items below. Each of them needs a solution before a service can be served through Praxis.
+
+### Between MaaS and KServe
+
+| Shortcoming | What it causes | Fix |
+|---|---|---|
+| MaaS reads KServe's HTTPRoute. There is no single contract on the `LLMInferenceService` status. | MaaS finds the route by label, checks its parent Gateway and takes the hostname from it. 42 places in the MaaS code depend on an HTTPRoute or a Gateway. Without the route a `MaaSModelRef` becomes `Pending` although the service is `Ready`. | MaaS reads the backend, the port, the model names and `Ready` from the service status, and nothing else. |
+| KServe only publishes that status when a route exists. | Without a route `status.router` is empty, the address has no port and no model names, and a service with a scheduler never becomes `Ready`. | KServe publishes the same status with or without a route. |
+| A MaaS policy is owned by a KServe object. | The per-model rate limit policy targets the HTTPRoute and has it as owner. Deleting the route deletes the limit. | MaaS generates per-model limits that do not attach to a route. This needs Praxis support first ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352), [`policy#308`](https://github.com/praxis-proxy/policy/issues/308), or the `token_rate_limit` filter). |
+| Tenant identity is bound to a Gateway. | An `AITenant` fails without a Gateway, and a model's tenant is looked up from its route's parent Gateway. The proposal allows an ingress with no Gateway API. | Keep the Gateway as the tenant's entry point, resolve the tenant from the service's `gateway.refs`, and point an `AITenant` at a `Proxy`. An ingress without Gateway API would need `spec.tenantRef`. |
+| The model ID is only published on gateway addresses. | The ID clients send is a contract. MaaS takes it from `status.addresses[].models`, which KServe fills from gateway URLs only. Without a route MaaS rebuilds it from the spec, and AFAICT that misses a name set through a `baseRef` and LoRA adapter names. | KServe publishes served model names without a route. MaaS uses them as the routing key. |
+| Canary weights only exist on a route. | `group` and `weight` are fields of `spec.router.route`, and their status needs a route. `MaaSModelRef` has no weight. A service without a route cannot take part in a canary. | Either KServe allows `group` and `weight` without a route, or MaaS holds the weights. |
+
+### In Praxis
+
+The migration also depends on work in Praxis that is still open. It is outside our control.
+
+| Shortcoming | What it causes | Fix |
+|---|---|---|
+| The EPP client does not cover the endpoint picker protocol. | It rejects the EPP's list of fallback endpoints, never reports which pod served the request and does not send response bodies to the EPP. AFAICT it has no TLS. It is off in published builds. No issue tracks any of this, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed. | File the issues under [`gateway-controller#24`](https://github.com/praxis-proxy/gateway-controller/issues/24), and test against the real EPP with KServe's presets. |
+| The policy engine cannot replace Kuadrant for MaaS yet. | No Kubernetes token auth ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213)), no limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352)), counters per replica ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)), and the FIPS image is built without the policy filter. The MaaS team's own POC lists these. | Track those four, and decide whether token limits are enforced by the policy engine or by the `token_rate_limit` filter. |
+| The control plane is not built. | `gateway-controller` has no `ModelProvider` type and does not render or deploy a proxy yet ([`#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17), [`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). | No action on our side. Track it. The [`v1.0.0` milestone](https://github.com/praxis-proxy/gateway-controller/milestone/1) is due 2027-01-20. |
+
+## Gateway API support in Praxis
+
+We checked whether Praxis has a Gateway API implementation that could serve the HTTPRoute KServe already generates. It does not have one we can rely on. The only Gateway API code is in the Rust [`operator`](https://github.com/praxis-proxy/operator), and new work happens in `gateway-controller`: rendering the Praxis config and deploying the proxy are tracked there ([`#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17)). The design also rules out a separate Gateway API controller next to it, because the Gateway API implementation "must therefore be the same controller that implements the Praxis Core API" ([`api.md`, section 12](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md#12-stance-on-gateway-api)). `gateway-controller` has no Gateway API code, and none of its [49 open issues](https://github.com/praxis-proxy/gateway-controller/issues) is about it.
+
+The operator also cannot serve the HTTPRoute that KServe generates. It passes Gateway API HTTP conformance, core and extended, but thirteen of the sixteen rules in [KServe's route preset](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/config/llmisvcconfig/config-llm-router-route.yaml) point at an `InferencePool`, and the operator accepts `core/Service` only ([`src/gateway_api/route_status.rs:142-148`](https://github.com/praxis-proxy/operator/blob/1a9f9d57cd6bf5362291bcf9e1655770747224a3/src/gateway_api/route_status.rs#L142-L148) at [`1a9f9d5`](https://github.com/praxis-proxy/operator/commit/1a9f9d57cd6bf5362291bcf9e1655770747224a3)).
+
+| KServe's route preset uses | Praxis operator (being replaced) | AI Gateway API (design) |
+|---|---|---|
+| Path and header matches | Yes, prefix and exact | No surface, routes on body `model` |
+| Prefix rewrite, 14 of 16 rules | Yes | None |
+| Weighted backendRefs | Yes | On `Model.providers[]`, out of v1alpha1 scope |
+| Request timeout, 4 rules at 600s | Partial | None |
+| `InferencePool` backendRef, 13 of 16 rules | No: `InvalidKind`, generated 500 | Not in the design, only in [PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26) |
+| `Service` backendRef, 3 rules | Yes, plaintext upstream only | `backend.serviceRef` |
+| Pool parent status for readiness | No | No |
+| TLS to pods and to the EPP | Core supports upstream TLS, operator does not emit it | Unspecified |
+
+- The operator has no tags, no releases and no users in the demos. A maintainer wrote on 2026-11-13 that they are "considering archiving" it once `gateway-controller` covers conformance.
+- No HTTPRoute support is being built for Praxis today. The AI Gateway API has no Gateway API dependency by design. Gateway API support is only mentioned as something for later ("When we implement GWAPI for praxis", [`policy#104`](https://github.com/praxis-proxy/policy/issues/104#issuecomment-6942155676), 2026-11-17), with no issue and no date.
+- The HTTPRoute does not need translating. Most of it is specific to Gateway API. Five pieces of information have to be passed on, and only KServe has them: the backend (pool or Service, name, port), served model names including LoRA adapters, backend TLS and its trust anchor, lifecycle (ready, stopped, deleting), and `group` and `weight` if the service stays the canary API.
+- Not available unless Praxis implements them: the catch-all rules that send non-inference paths such as `/v1/models` to the Service, and the unlimited request timeout.
+
+## Not verified
+
+The findings are based on reading code, issues and the proposal. The following was not verified.
+
+- Nothing was run on a cluster. What the operator does with KServe's route is read from code.
+- Whether [PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26) on `gateway-controller` is still the intent. It was last pushed on 2026-11-12 and is unapproved. The pivot to the current proposal is not in any public thread.
+- How the proxy is deployed. `gateway-controller` has open issues for the `Proxy` ConfigMap, Deployment and Service ([`#15`](https://github.com/praxis-proxy/gateway-controller/issues/15) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17)) and nothing merged.
+- That the Praxis `ext_proc` client cannot do TLS. This is inferred from its config and dependencies.
+</pre>
+</div>
+
+<script>
+  (function () {
+    var control = document.querySelector(".view");
+    if (!control) return;
+    var page = document.querySelector(".page");
+    var view = document.querySelector(".md-view");
+    var source = view.querySelector(".md-source");
+    var status = view.querySelector(".md-status");
+    function show(name) {
+      var markdown = name === "markdown";
+      page.hidden = markdown;
+      view.hidden = !markdown;
+      control.querySelectorAll("input").forEach(function (input) { input.checked = input.value === name; });
+      try { history.replaceState(null, "", markdown ? "#markdown" : location.pathname + location.search); } catch (e) {}
+    }
+    control.querySelectorAll("input").forEach(function (input) {
+      input.addEventListener("change", function () { show(input.value); });
+    });
+    view.querySelector(".md-copy").addEventListener("click", function () {
+      function done(ok) { status.textContent = ok ? "Copied" : "Select the text and copy it"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(source.textContent).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+      var range = document.createRange();
+      range.selectNodeContents(source);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      done(ok);
+    });
+    control.hidden = false;
+    show(location.hash === "#markdown" ? "markdown" : "page");
+  })();
+</script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>

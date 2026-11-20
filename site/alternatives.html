@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praxis alternatives</title>
+<meta name="description" content="The options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column. Figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a problem, or the piece that carries the routing decision */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+      --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+    --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+  tbody th { font-weight: 600; width: 16%; }
+  .tbl.wide table { min-width: 920px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
+
+  /* diagram marks: tiles with a header strip, dashed groups and lanes with a tab, ownership rails, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
+  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
+  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
+  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
+  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-ico { color: var(--muted); }
+  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
+  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
+  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
+  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.px { stroke: var(--px); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
+  .d-rule { stroke: var(--line); stroke-width: 1; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+  .d-tile-b.ks { stroke: var(--ks); stroke-width: 1.6; }
+  .d-tile-b.maas { stroke: var(--maas); stroke-width: 1.6; }
+  .d-tile-b.gc { stroke: var(--gc); stroke-width: 1.6; }
+  .d-tile-b.agc { stroke: var(--agc); stroke-width: 1.6; }
+  .d-head.ks { fill: color-mix(in srgb, var(--ks) 13%, var(--panel)); }
+  .d-head.maas { fill: color-mix(in srgb, var(--maas) 13%, var(--panel)); }
+  .d-head.gc { fill: color-mix(in srgb, var(--gc) 13%, var(--panel)); }
+  .d-head.agc { fill: color-mix(in srgb, var(--agc) 15%, var(--panel)); }
+  .d-kind.ks { fill: var(--ks); } .d-kind.maas { fill: var(--maas); }
+  .d-kind.gc { fill: var(--gc); } .d-kind.agc { fill: var(--agc); }
+  .d-pill.maas { stroke: var(--maas); }
+  .d-pillt.maas { fill: var(--maas); }
+  .d-edge.maas { stroke: var(--maas); stroke-width: 2; }
+  .d-ah.maas { fill: var(--maas); }
+  .d-rail { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .d-rail.warn { stroke: var(--warn); stroke-width: 2; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .switch label { position: relative; display: block; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .switch input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .switch input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .md-view {
+    max-width: 1080px; margin: 0 auto; padding-top: 28px; padding-bottom: 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--sans);
+  }
+  .md-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .md-copy { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .md-copy:hover { background: var(--code-bg); }
+  .md-copy:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .md-status { font-size: 13px; color: var(--muted); }
+  .md-source { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html">Overview</a>
+    <a href="decision.html">Praxis decision</a>
+    <a href="alternatives.html" aria-current="page">Praxis alternatives</a>
+    <a href="context.html">Praxis context</a>
+    <a href="migration.html">Praxis migration</a>
+  </nav>
+  <div class="controls">
+    <div class="switch view" role="radiogroup" aria-label="View" hidden>
+      <label><input type="radio" name="view" value="page"><span>Page</span></label>
+      <label><input type="radio" name="view" value="markdown"><span>Markdown</span></label>
+    </div>
+    <div class="switch theme" role="radiogroup" aria-label="Theme" hidden>
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Decision record · Praxis data plane</div>
+  <h1>Alternatives considered</h1>
+  <p class="lede">Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the <code>ModelProvider</code>, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in <a href="decision.html">Praxis decision</a>.</p>
+</header>
+
+<section>
+  <div class="prose">
+    <h2>Reading the figures</h2>
+    <p>The figures use the same three columns, one per namespace, and the same marks.</p>
+  </div>
+  <ul class="legend">
+    <li><span class="chips"><span class="chip"></span><span class="chip ks"></span><span class="chip maas"></span><span class="chip gc"></span><span class="chip agc"></span></span><span>The colour of a tile and the label in its header name who writes the object: a user or an admin, KServe, MaaS, <code>gateway-controller</code>, or the AI Gateway controller (AGC).</span></li>
+    <li><span class="stroke rail"></span><span>A tile indented under another is owned by it through an <code>ownerReference</code>.</span></li>
+    <li><span class="stroke"></span><span>A solid arrow is a reference held in a field. It points from the object that holds the field.</span></li>
+    <li><span class="stroke dash"></span><span>A dashed arrow is an action of a controller with no reference between the two objects.</span></li>
+    <li><span class="stroke warn"></span><span>Red marks a relationship that is listed under the figure as a problem.</span></li>
+  </ul>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Today: Gateway API with Kuadrant</h2>
+    <p>The HTTPRoute is the central object today. KServe creates it, the tenant Gateway admits it, and MaaS both reads it and attaches a policy to it. As a result, objects written by MaaS depend on an object that KServe owns.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 620" role="img" aria-label="Custom resources today. The LLMInferenceService owns the HTTPRoute, the InferencePool and the EPP. The HTTPRoute references the tenant Gateway and owns the per-model TokenRateLimitPolicy that MaaS writes. MaaSModelRef references the service and the AITenant and takes its status from the HTTPRoute. The AITenant references the Gateway, which owns the AuthPolicy.">
+        <defs>
+        <marker id="r1-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r1-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r1-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="r1-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        </defs>
+        <rect class="d-grp " x="774" y="54" width="250" height="278" rx="12"/>
+        <rect class="d-grp " x="395" y="54" width="250" height="480" rx="12"/>
+        <rect class="d-grp " x="16" y="54" width="250" height="278" rx="12"/>
+        <line class="d-rail " x1="414.0" y1="210" x2="414.0" y2="431.0"/>
+        <line class="d-rail " x1="414.0" y1="245.0" x2="421" y2="245.0"/>
+        <line class="d-rail " x1="414.0" y1="369.0" x2="421" y2="369.0"/>
+        <line class="d-rail " x1="414.0" y1="431.0" x2="421" y2="431.0"/>
+        <line class="d-rail warn" x1="428.0" y1="272" x2="428.0" y2="307.0"/>
+        <line class="d-rail warn" x1="428.0" y1="307.0" x2="435" y2="307.0"/>
+        <line class="d-rail " x1="793.0" y1="132" x2="793.0" y2="167.0"/>
+        <line class="d-rail " x1="793.0" y1="167.0" x2="800" y2="167.0"/>
+        <polyline class="d-edge " points="407,92 254,92" marker-end="url(#r1-ah)"/>
+        <polyline class="d-edge " points="254,167.0 300,167.0"/>
+        <polyline class="d-edge " points="254,229.0 300,229.0 300,124 407,124" marker-end="url(#r1-ah)"/>
+        <polyline class="d-edge " points="200,78 200,30 960,30 960,78" marker-end="url(#r1-ah)"/>
+        <polyline class="d-edge " points="633,256 745,256 745,105 786,105" marker-end="url(#r1-ah)"/>
+        <polyline class="d-edge warn dash" points="633,113 692,113 692,232 633,232" marker-end="url(#r1-ah-warn)"/>
+        <rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+        <rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="94.5">AITenant</text>
+        <text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+        <text class="d-s" x="40" y="120">spec.gateway: the tenant Gateway</text>
+        <rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+        <rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+        <text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="182">token limits per model</text>
+        <rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+        <rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+        <text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="244">who may call which model</text>
+        <rect class="d-tile" x="28" y="264" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+        <rect class="d-tile-b maas" x="28" y="264" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="40" y="280.5">maas-api, HTTPRoute</text>
+        <text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="306">route attached to the Gateway</text>
+        <rect class="d-tab " x="30" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="94.5" y="58" text-anchor="middle">Tenant namespaces</text>
+        <rect class="d-tile" x="407" y="78" width="226" height="70" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+        <rect class="d-tile-b " x="407" y="78" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+        <text class="d-own" x="623" y="94" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="120">modelRef: LLMInferenceService</text>
+        <text class="d-s" x="419" y="136">status derived from the HTTPRoute</text>
+        <rect class="d-tile" x="407" y="156" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M407.6 180V164Q407.6 156.6 415 156.6H625Q632.4 156.6 632.4 164V180Z"/>
+        <rect class="d-tile-b " x="407" y="156" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="419" y="172.5">LLMInferenceService</text>
+        <text class="d-own" x="623" y="172" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="198">gateway.refs: the tenant Gateway</text>
+        <rect class="d-tile" x="421" y="218" width="212" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head ks" d="M421.6 242V226Q421.6 218.6 429 218.6H625Q632.4 218.6 632.4 226V242Z"/>
+        <rect class="d-tile-b ks" x="421" y="218" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="234.5">HTTPRoute</text>
+        <text class="d-own" x="623" y="234" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="260">backendRefs: pool, Service</text>
+        <rect class="d-tile" x="435" y="280" width="198" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head maas" d="M435.6 304V288Q435.6 280.6 443 280.6H625Q632.4 280.6 632.4 288V304Z"/>
+        <rect class="d-tile-b maas" x="435" y="280" width="198" height="54" rx="8"/>
+        <text class="d-kind maas" x="447" y="296.5">TokenRateLimitPolicy</text>
+        <text class="d-own" x="623" y="296" text-anchor="end">MaaS</text>
+        <text class="d-s" x="447" y="322">targetRef: the HTTPRoute</text>
+        <rect class="d-tile" x="421" y="342" width="212" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head ks" d="M421.6 366V350Q421.6 342.6 429 342.6H625Q632.4 342.6 632.4 350V366Z"/>
+        <rect class="d-tile-b ks" x="421" y="342" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="358.5">InferencePool</text>
+        <text class="d-own" x="623" y="358" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="384">endpointPickerRef: EPP Service</text>
+        <rect class="d-tile" x="421" y="404" width="212" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head ks" d="M421.6 428V412Q421.6 404.6 429 404.6H625Q632.4 404.6 632.4 412V428Z"/>
+        <rect class="d-tile-b ks" x="421" y="404" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="420.5">EPP, workload</text>
+        <text class="d-own" x="623" y="420" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="446">Deployments and Services</text>
+        <rect class="d-tile" x="407" y="466" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head maas" d="M407.6 490V474Q407.6 466.6 415 466.6H625Q632.4 466.6 632.4 474V490Z"/>
+        <rect class="d-tile-b maas" x="407" y="466" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="419" y="482.5">InferenceObjective</text>
+        <text class="d-own" x="623" y="482" text-anchor="end">MaaS</text>
+        <text class="d-s" x="419" y="508">poolRef: InferencePool</text>
+        <rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+        <text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+        <rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+        <rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="94.5">Gateway</text>
+        <text class="d-own" x="1002" y="94" text-anchor="end">network admin</text>
+        <text class="d-s" x="798" y="120">implemented by Istio</text>
+        <rect class="d-tile" x="800" y="140" width="212" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head maas" d="M800.6 164V148Q800.6 140.6 808 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+        <rect class="d-tile-b maas" x="800" y="140" width="212" height="54" rx="8"/>
+        <text class="d-kind maas" x="812" y="156.5">AuthPolicy</text>
+        <text class="d-own" x="1002" y="156" text-anchor="end">MaaS</text>
+        <text class="d-s" x="812" y="182">targetRef: the Gateway</text>
+        <rect class="d-tile" x="786" y="202" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head maas" d="M786.6 226V210Q786.6 202.6 794 202.6H1004Q1011.4 202.6 1011.4 210V226Z"/>
+        <rect class="d-tile-b maas" x="786" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="798" y="218.5">TokenRateLimitPolicy</text>
+        <text class="d-own" x="1002" y="218" text-anchor="end">MaaS</text>
+        <text class="d-s" x="798" y="244">default deny, targetRef: Gateway</text>
+        <rect class="d-tile" x="786" y="264" width="226" height="54" rx="8" filter="url(#r1-sh)"/>
+        <path class="d-head agc" d="M786.6 288V272Q786.6 264.6 794 264.6H1004Q1011.4 264.6 1011.4 272V288Z"/>
+        <rect class="d-tile-b agc" x="786" y="264" width="226" height="54" rx="8"/>
+        <text class="d-kind agc" x="798" y="280.5">praxis-extproc</text>
+        <text class="d-own" x="1002" y="280" text-anchor="end">AGC</text>
+        <text class="d-s" x="798" y="306">placed by status.gatewayRef</text>
+        <rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="852.5" y="58" text-anchor="middle">Gateway namespace</text>
+        <rect class="d-pill " x="296.0" y="83" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="330" y="95.6" text-anchor="middle">tenantRef</text>
+        <rect class="d-pill " x="318.0" y="115" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="352" y="127.6" text-anchor="middle">modelRefs</text>
+        <rect class="d-pill " x="537.5" y="21" width="85" height="18" rx="9"/>
+        <text class="d-pillt " x="580" y="33.6" text-anchor="middle">spec.gateway</text>
+        <rect class="d-pill " x="652.0" y="247" width="74" height="18" rx="9"/>
+        <text class="d-pillt " x="689" y="259.6" text-anchor="middle">parentRefs</text>
+        <rect class="d-pill warn" x="655.0" y="167" width="74" height="18" rx="9"/>
+        <text class="d-pillt warn" x="692" y="179.6" text-anchor="middle">MaaS reads</text>
+        <rect class="d-legend" x="16" y="554" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="564.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b " x="32" y="564.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="573.8">user or admin</text>
+        <rect class="d-tile" x="160.7" y="564.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b ks" x="160.7" y="564.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="186.7" y="573.8">KServe</text>
+        <rect class="d-tile" x="248.1" y="564.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b maas" x="248.1" y="564.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="274.1" y="573.8">MaaS</text>
+        <rect class="d-tile" x="323.7" y="564.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b agc" x="323.7" y="564.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="349.7" y="573.8">AGC</text>
+        <polyline class="d-rail " points="395.4,563.0 395.4,573.0 407.4,573.0"/>
+        <text class="d-lg" x="415.4" y="573.8">owned through an ownerReference</text>
+        <line class="d-edge " x1="624.3" y1="570.0" x2="654.3" y2="570.0" marker-end="url(#r1-ah)"/>
+        <text class="d-lg" x="662.3" y="573.8">reference held in a field</text>
+        <line class="d-edge  dash" x1="32" y1="592.0" x2="62" y2="592.0" marker-end="url(#r1-ah)"/>
+        <text class="d-lg" x="70" y="595.8">controller action, no reference</text>
+        <line class="d-edge warn" x1="278.9" y1="592.0" x2="308.9" y2="592.0" marker-end="url(#r1-ah-warn)"/>
+        <text class="d-lg" x="316.9" y="595.8">red: listed as a problem</text>
+        <rect class="d-grp " x="484.5" y="586.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="510.5" y="595.8">namespace</text>
+      </svg>
+    </div>
+    <figcaption>The per-model <code>TokenRateLimitPolicy</code> is written by MaaS and owned by the HTTPRoute that KServe creates. <code>MaaSModelRef</code> takes its status from the same route.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the HTTPRoute, the <code>InferencePool</code>, the EPP and the workload, and owns all of them through the <code>LLMInferenceService</code>. It derives <code>Ready</code> and the URL from the status Istio writes on the route and the pool.</li>
+          <li>MaaS reads the HTTPRoute and the service status to set the status of a <code>MaaSModelRef</code>. From a <code>MaaSAuthPolicy</code> it creates one <code>AuthPolicy</code> on the Gateway. From a <code>MaaSSubscription</code> it creates one <code>TokenRateLimitPolicy</code> per model, with the HTTPRoute as target and owner, and an <code>InferenceObjective</code> per pool.</li>
+          <li>AGC deploys <code>praxis-extproc</code> and its <code>EnvoyFilter</code> for the Gateway named in <code>AITenant.status.gatewayRef</code>.</li>
+          <li>Istio implements the Gateway and writes route and pool status. Kuadrant enforces the <code>AuthPolicy</code> and the rate limit policies.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Relationships that cause problems</h3>
+        <ul>
+          <li>A MaaS policy is owned by a KServe object. Deleting the HTTPRoute deletes the per-model rate limit.</li>
+          <li>MaaS depends on the HTTPRoute, which is an implementation detail of KServe, and not on the <code>LLMInferenceService</code> status.</li>
+          <li>The tenant is bound to a Gateway. An <code>AITenant</code> fails without one, and when <code>tenantRef</code> is empty the tenant of a model is looked up from the route's parent Gateway.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Option 1: KServe creates the ModelProvider</h2>
+    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 590" role="img" aria-label="Custom resources in option 1. KServe creates the ModelProvider in the tenant namespace, next to the Proxy and the Policy that MaaS creates. The provider references the AITenant and the InferencePool, and MaaS sets its status.proxyRef. No ownerReference links the provider to the LLMInferenceService, and the service needs a reference to the tenant that is not defined.">
+        <defs>
+        <marker id="r2-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r2-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r2-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="r2-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        </defs>
+        <rect class="d-grp " x="774" y="54" width="250" height="232" rx="12"/>
+        <rect class="d-grp " x="395" y="54" width="250" height="278" rx="12"/>
+        <rect class="d-grp " x="16" y="54" width="250" height="450" rx="12"/>
+        <line class="d-rail " x1="414.0" y1="194" x2="414.0" y2="291.0"/>
+        <line class="d-rail " x1="414.0" y1="229.0" x2="421" y2="229.0"/>
+        <line class="d-rail " x1="414.0" y1="291.0" x2="421" y2="291.0"/>
+        <polyline class="d-edge warn dash" points="407,160 360,160 360,105 254,105" marker-end="url(#r2-ah-warn)"/>
+        <polyline class="d-edge warn dash" points="407,178 314,178 314,420 254,420" marker-end="url(#r2-ah-warn)"/>
+        <polyline class="d-edge " points="254,464 352,464 352,229.0 421,229.0" marker-end="url(#r2-ah)"/>
+        <polyline class="d-edge  dash" points="786,167.0 710,167.0 710,237.0 633,237.0" marker-end="url(#r2-ah)"/>
+        <rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+        <rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="94.5">AITenant</text>
+        <text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+        <text class="d-s" x="40" y="120">maps the tenant to its Proxy</text>
+        <rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+        <rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+        <text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="182">input to the Policy, undefined</text>
+        <rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+        <rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+        <text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="244">input to the Policy, undefined</text>
+        <rect class="d-tile" x="28" y="264" width="226" height="70" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+        <rect class="d-tile-b maas" x="28" y="264" width="226" height="70" rx="8"/>
+        <text class="d-kind maas" x="40" y="280.5">Proxy</text>
+        <text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="306">policy slot: the Policy</text>
+        <text class="d-s" x="40" y="322">routing slot: gateway-controller</text>
+        <rect class="d-tile" x="28" y="342" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head maas" d="M28.6 366V350Q28.6 342.6 36 342.6H246Q253.4 342.6 253.4 350V366Z"/>
+        <rect class="d-tile-b maas" x="28" y="342" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="40" y="358.5">Policy</text>
+        <text class="d-own" x="244" y="358" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="384">auth and token limits</text>
+        <rect class="d-tile" x="28" y="404" width="226" height="86" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head ks" d="M28.6 428V412Q28.6 404.6 36 404.6H246Q253.4 404.6 253.4 412V428Z"/>
+        <rect class="d-tile-b ks" x="28" y="404" width="226" height="86" rx="8"/>
+        <text class="d-kind ks" x="40" y="420.5">ModelProvider</text>
+        <text class="d-own" x="244" y="420" text-anchor="end">KServe</text>
+        <text class="d-s" x="40" y="446">aiTenantRef: AITenant</text>
+        <text class="d-s" x="40" y="462">backend.inferencePoolRef: pool</text>
+        <text class="d-s" x="40" y="478">status.proxyRef: set by MaaS</text>
+        <rect class="d-tab " x="30" y="44" width="123" height="20" rx="5"/>
+        <text class="d-tabt" x="91.5" y="58" text-anchor="middle">Tenant namespace</text>
+        <rect class="d-tile" x="407" y="78" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+        <rect class="d-tile-b " x="407" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+        <text class="d-own" x="623" y="94" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="120">not used to create the provider</text>
+        <rect class="d-tile" x="407" y="140" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M407.6 164V148Q407.6 140.6 415 140.6H625Q632.4 140.6 632.4 148V164Z"/>
+        <rect class="d-tile-b " x="407" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="419" y="156.5">LLMInferenceService</text>
+        <text class="d-own" x="623" y="156" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="182">needs a reference to the tenant</text>
+        <rect class="d-tile" x="421" y="202" width="212" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head ks" d="M421.6 226V210Q421.6 202.6 429 202.6H625Q632.4 202.6 632.4 210V226Z"/>
+        <rect class="d-tile-b ks" x="421" y="202" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="218.5">InferencePool</text>
+        <text class="d-own" x="623" y="218" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="244">endpointPickerRef: EPP Service</text>
+        <rect class="d-tile" x="421" y="264" width="212" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head ks" d="M421.6 288V272Q421.6 264.6 429 264.6H625Q632.4 264.6 632.4 272V288Z"/>
+        <rect class="d-tile-b ks" x="421" y="264" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="280.5">EPP, workload</text>
+        <text class="d-own" x="623" y="280" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="306">Deployments and Services</text>
+        <rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+        <text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+        <rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+        <rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="94.5">Platform ingress</text>
+        <text class="d-own" x="1002" y="94" text-anchor="end">platform</text>
+        <text class="d-s" x="798" y="120">forwards to the Praxis Service</text>
+        <rect class="d-tile" x="786" y="140" width="226" height="54" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head gc" d="M786.6 164V148Q786.6 140.6 794 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+        <rect class="d-tile-b gc" x="786" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind gc" x="798" y="156.5">Praxis proxy</text>
+        <text class="d-own" x="1002" y="156" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="182">rendered from Proxy and Policy</text>
+        <rect class="d-tile" x="786" y="202" width="226" height="70" rx="8" filter="url(#r2-sh)"/>
+        <path class="d-head gc" d="M786.6 226V210Q786.6 202.6 794 202.6H1004Q1011.4 202.6 1011.4 210V226Z"/>
+        <rect class="d-tile-b gc" x="786" y="202" width="226" height="70" rx="8"/>
+        <text class="d-kind gc" x="798" y="218.5">Routing config</text>
+        <text class="d-own" x="1002" y="218" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="244">from the ModelProviders,</text>
+        <text class="d-s" x="798" y="260">grouped by publishedName</text>
+        <rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="852.5" y="58" text-anchor="middle">Praxis data plane</text>
+        <rect class="d-pill warn" x="281.0" y="96" width="52" height="18" rx="9"/>
+        <text class="d-pillt warn" x="307" y="108.6" text-anchor="middle">tenant</text>
+        <rect class="d-pill warn" x="266.0" y="291" width="96" height="18" rx="9"/>
+        <text class="d-pillt warn" x="314" y="303.6" text-anchor="middle">KServe creates</text>
+        <rect class="d-pill " x="323.5" y="371" width="57" height="18" rx="9"/>
+        <text class="d-pillt " x="352" y="383.6" text-anchor="middle">backend</text>
+        <rect class="d-pill " x="676.0" y="196" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="710" y="208.6" text-anchor="middle">routes to</text>
+        <rect class="d-legend" x="16" y="524" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="534.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b " x="32" y="534.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="543.8">user or admin</text>
+        <rect class="d-tile" x="160.7" y="534.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b ks" x="160.7" y="534.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="186.7" y="543.8">KServe</text>
+        <rect class="d-tile" x="248.1" y="534.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b maas" x="248.1" y="534.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="274.1" y="543.8">MaaS</text>
+        <rect class="d-tile" x="323.7" y="534.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b gc" x="323.7" y="534.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="349.7" y="543.8">gateway-controller</text>
+        <polyline class="d-rail " points="483.9,533.0 483.9,543.0 495.9,543.0"/>
+        <text class="d-lg" x="503.9" y="543.8">owned through an ownerReference</text>
+        <line class="d-edge " x1="712.8" y1="540.0" x2="742.8" y2="540.0" marker-end="url(#r2-ah)"/>
+        <text class="d-lg" x="750.8" y="543.8">reference held in a field</text>
+        <line class="d-edge  dash" x1="32" y1="562.0" x2="62" y2="562.0" marker-end="url(#r2-ah)"/>
+        <text class="d-lg" x="70" y="565.8">controller action, no reference</text>
+        <line class="d-edge warn" x1="278.9" y1="562.0" x2="308.9" y2="562.0" marker-end="url(#r2-ah-warn)"/>
+        <text class="d-lg" x="316.9" y="565.8">red: listed as a problem</text>
+        <rect class="d-grp " x="484.5" y="556.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="510.5" y="565.8">namespace</text>
+      </svg>
+    </div>
+    <figcaption>The <code>ModelProvider</code> is the only object in the tenant namespace that MaaS does not create. It has three writers: KServe for the spec, MaaS for <code>status.proxyRef</code>, and <code>gateway-controller</code> for readiness.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the pool, the EPP and the workload as today, and one <code>ModelProvider</code> per service in the tenant namespace. It sets the tenant, the pool and the weight, and changes the weight during a canary.</li>
+          <li>MaaS creates the <code>Proxy</code> and the <code>Policy</code>, maps the <code>AITenant</code> to the <code>Proxy</code>, and sets <code>status.proxyRef</code> on each provider so that <code>gateway-controller</code> does not have to read the <code>AITenant</code>.</li>
+          <li><code>gateway-controller</code> reads the <code>Proxy</code>, the <code>Policy</code> and the providers. It deploys the Praxis proxy, writes the routing config grouped by <code>publishedName</code>, and writes readiness on the provider.</li>
+          <li>The platform ingress forwards all traffic to the Praxis Service.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why it is not preferred</h3>
+        <ul>
+          <li>KServe writes into a namespace it does not manage. An <code>ownerReference</code> cannot cross namespaces, so nothing ties the lifetime of the provider to the service.</li>
+          <li>KServe has no tenant. An <code>LLMInferenceService</code> has no tenant field, and resolving the tenant "through gatewayRef" requires a Gateway.</li>
+          <li>One object has three writers, and two of them write its status.</li>
+          <li><code>MaaSModelRef</code>, <code>MaaSSubscription</code> and <code>MaaSAuthPolicy</code> have no defined role. One service can be published to several tenants today, which a single <code>aiTenantRef</code> cannot express.</li>
+          <li><code>inferencePoolRef</code> holds only a name, while the pool is in another namespace.</li>
+          <li>MaaS still has to stop depending on the HTTPRoute, so the work in MaaS is not smaller.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Option 2: MaaS creates the ModelProvider</h2>
+    <p>In option 2 KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS creates a <code>ModelProvider</code> for each <code>MaaSModelRef</code>. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace. It needs the <code>ModelProvider</code> API, which is open with no milestone (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>), so it is not preferred now. The preferred option uses the same contract with KServe and reaches this state when the API is adopted.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 574" role="img" aria-label="Custom resources in option 2. KServe writes only in the model namespace and publishes the backend in the LLMInferenceService status. MaaS creates the ModelProvider for each MaaSModelRef in the tenant namespace, next to the Proxy and the Policy. The provider references its backend in the model namespace.">
+        <defs>
+        <marker id="r3-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r3-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r3-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="r3-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        </defs>
+        <rect class="d-grp " x="774" y="54" width="250" height="232" rx="12"/>
+        <rect class="d-grp " x="395" y="54" width="250" height="372" rx="12"/>
+        <rect class="d-grp " x="16" y="54" width="250" height="434" rx="12"/>
+        <line class="d-rail " x1="414.0" y1="226" x2="414.0" y2="323.0"/>
+        <line class="d-rail " x1="414.0" y1="261.0" x2="421" y2="261.0"/>
+        <line class="d-rail " x1="414.0" y1="323.0" x2="421" y2="323.0"/>
+        <polyline class="d-edge " points="407,92 254,92" marker-end="url(#r3-ah)"/>
+        <polyline class="d-edge " points="254,167.0 292,167.0"/>
+        <polyline class="d-edge " points="254,229.0 292,229.0 292,116 407,116" marker-end="url(#r3-ah)"/>
+        <polyline class="d-edge maas dash" points="407,140 320,140 320,420 254,420" marker-end="url(#r3-ah-maas)"/>
+        <polyline class="d-edge " points="254,456 374,456 374,261.0 421,261.0" marker-end="url(#r3-ah)"/>
+        <polyline class="d-edge  dash" points="786,167.0 710,167.0 710,269.0 633,269.0" marker-end="url(#r3-ah)"/>
+        <rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+        <rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="94.5">AITenant</text>
+        <text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+        <text class="d-s" x="40" y="120">maps the tenant to its Proxy</text>
+        <rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+        <rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+        <text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="182">token limits per model</text>
+        <rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+        <rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+        <text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="244">who may call which model</text>
+        <rect class="d-tile" x="28" y="264" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+        <rect class="d-tile-b maas" x="28" y="264" width="226" height="70" rx="8"/>
+        <text class="d-kind maas" x="40" y="280.5">Proxy</text>
+        <text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="306">policy slot: the Policy</text>
+        <text class="d-s" x="40" y="322">routing slot: gateway-controller</text>
+        <rect class="d-tile" x="28" y="342" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head maas" d="M28.6 366V350Q28.6 342.6 36 342.6H246Q253.4 342.6 253.4 350V366Z"/>
+        <rect class="d-tile-b maas" x="28" y="342" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="40" y="358.5">Policy</text>
+        <text class="d-own" x="244" y="358" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="384">from subscriptions, auth policies</text>
+        <rect class="d-tile" x="28" y="404" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head maas" d="M28.6 428V412Q28.6 404.6 36 404.6H246Q253.4 404.6 253.4 412V428Z"/>
+        <rect class="d-tile-b maas" x="28" y="404" width="226" height="70" rx="8"/>
+        <text class="d-kind maas" x="40" y="420.5">ModelProvider</text>
+        <text class="d-own" x="244" y="420" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="446">backend: pool or Service</text>
+        <text class="d-s" x="40" y="462">tenant and model ID from MaaS</text>
+        <rect class="d-tab " x="30" y="44" width="123" height="20" rx="5"/>
+        <text class="d-tabt" x="91.5" y="58" text-anchor="middle">Tenant namespace</text>
+        <rect class="d-tile" x="407" y="78" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+        <rect class="d-tile-b " x="407" y="78" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+        <text class="d-own" x="623" y="94" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="120">modelRef: LLMInferenceService</text>
+        <text class="d-s" x="419" y="136">cleanup finalizer already exists</text>
+        <rect class="d-tile" x="407" y="156" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M407.6 180V164Q407.6 156.6 415 156.6H625Q632.4 156.6 632.4 164V180Z"/>
+        <rect class="d-tile-b " x="407" y="156" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="172.5">LLMInferenceService</text>
+        <text class="d-own" x="623" y="172" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="198">status: backend, port,</text>
+        <text class="d-s" x="419" y="214">model names, Ready</text>
+        <rect class="d-tile" x="421" y="234" width="212" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head ks" d="M421.6 258V242Q421.6 234.6 429 234.6H625Q632.4 234.6 632.4 242V258Z"/>
+        <rect class="d-tile-b ks" x="421" y="234" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="250.5">InferencePool</text>
+        <text class="d-own" x="623" y="250" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="276">endpointPickerRef: EPP Service</text>
+        <rect class="d-tile" x="421" y="296" width="212" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head ks" d="M421.6 320V304Q421.6 296.6 429 296.6H625Q632.4 296.6 632.4 304V320Z"/>
+        <rect class="d-tile-b ks" x="421" y="296" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="312.5">EPP, workload</text>
+        <text class="d-own" x="623" y="312" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="338">Deployments and Services</text>
+        <rect class="d-tile" x="407" y="358" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head maas" d="M407.6 382V366Q407.6 358.6 415 358.6H625Q632.4 358.6 632.4 366V382Z"/>
+        <rect class="d-tile-b maas" x="407" y="358" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="419" y="374.5">InferenceObjective</text>
+        <text class="d-own" x="623" y="374" text-anchor="end">MaaS</text>
+        <text class="d-s" x="419" y="400">poolRef: InferencePool</text>
+        <rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+        <text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+        <rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+        <rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="94.5">Platform ingress</text>
+        <text class="d-own" x="1002" y="94" text-anchor="end">platform</text>
+        <text class="d-s" x="798" y="120">forwards to the Praxis Service</text>
+        <rect class="d-tile" x="786" y="140" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head gc" d="M786.6 164V148Q786.6 140.6 794 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+        <rect class="d-tile-b gc" x="786" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind gc" x="798" y="156.5">Praxis proxy</text>
+        <text class="d-own" x="1002" y="156" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="182">rendered from Proxy and Policy</text>
+        <rect class="d-tile" x="786" y="202" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+        <path class="d-head gc" d="M786.6 226V210Q786.6 202.6 794 202.6H1004Q1011.4 202.6 1011.4 210V226Z"/>
+        <rect class="d-tile-b gc" x="786" y="202" width="226" height="70" rx="8"/>
+        <text class="d-kind gc" x="798" y="218.5">Routing config</text>
+        <text class="d-own" x="1002" y="218" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="244">from the ModelProviders,</text>
+        <text class="d-s" x="798" y="260">grouped by publishedName</text>
+        <rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="852.5" y="58" text-anchor="middle">Praxis data plane</text>
+        <rect class="d-pill " x="296.0" y="83" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="330" y="95.6" text-anchor="middle">tenantRef</text>
+        <rect class="d-pill " x="316.0" y="107" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="350" y="119.6" text-anchor="middle">modelRefs</text>
+        <rect class="d-pill maas" x="277.5" y="321" width="85" height="18" rx="9"/>
+        <text class="d-pillt maas" x="320" y="333.6" text-anchor="middle">MaaS creates</text>
+        <rect class="d-pill " x="345.5" y="381" width="57" height="18" rx="9"/>
+        <text class="d-pillt " x="374" y="393.6" text-anchor="middle">backend</text>
+        <rect class="d-pill " x="676.0" y="213" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="710" y="225.6" text-anchor="middle">routes to</text>
+        <rect class="d-legend" x="16" y="508" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b " x="32" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="527.8">user or admin</text>
+        <rect class="d-tile" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b ks" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="186.7" y="527.8">KServe</text>
+        <rect class="d-tile" x="248.1" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b maas" x="248.1" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="274.1" y="527.8">MaaS</text>
+        <rect class="d-tile" x="323.7" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b gc" x="323.7" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="349.7" y="527.8">gateway-controller</text>
+        <polyline class="d-rail " points="483.9,517.0 483.9,527.0 495.9,527.0"/>
+        <text class="d-lg" x="503.9" y="527.8">owned through an ownerReference</text>
+        <line class="d-edge " x1="712.8" y1="524.0" x2="742.8" y2="524.0" marker-end="url(#r3-ah)"/>
+        <text class="d-lg" x="750.8" y="527.8">reference held in a field</text>
+        <line class="d-edge  dash" x1="32" y1="546.0" x2="62" y2="546.0" marker-end="url(#r3-ah)"/>
+        <text class="d-lg" x="70" y="549.8">controller action, no reference</text>
+        <line class="d-edge warn" x1="278.9" y1="546.0" x2="308.9" y2="546.0" marker-end="url(#r3-ah-warn)"/>
+        <text class="d-lg" x="316.9" y="549.8">red: listed as a problem</text>
+        <rect class="d-grp " x="484.5" y="540.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="510.5" y="549.8">namespace</text>
+      </svg>
+    </div>
+    <figcaption>MaaS writes every object in the tenant namespace, and KServe writes only next to the service. The one relationship that still crosses namespaces is the reference from the provider to its backend.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and <code>Ready</code> in status. It creates nothing in the tenant namespace and needs no tenant.</li>
+          <li>MaaS reads that status. For each <code>MaaSModelRef</code> it creates a <code>ModelProvider</code>, with the tenant taken from <code>spec.tenantRef</code>, and removes it through the cleanup finalizer it already has on <code>MaaSModelRef</code>. It creates the <code>Proxy</code> and the <code>Policy</code> from the tenant, the subscriptions and the auth policies.</li>
+          <li><code>gateway-controller</code> does the same as in option 1, and no longer shares the status of the provider with MaaS.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Open points</h3>
+        <ul>
+          <li>The provider references a backend in another namespace. The Praxis design leaves that access to NetworkPolicy and admission policy.</li>
+          <li>No <code>ownerReference</code> links a <code>MaaSModelRef</code> to its provider either, because they are in different namespaces. The finalizer covers deletion.</li>
+          <li>When a service is stopped or deleted, KServe removes the pool and the Service immediately, but the provider stays in the Praxis configuration until MaaS removes it.</li>
+          <li>Canary weights need an owner: they are either copied from the service or defined in MaaS.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Comparison</h2>
+    <p>The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in <a href="decision.html">Praxis decision</a>.</p>
+  </div>
+  <div class="tbl wide">
+    <table>
+      <thead><tr><th>Relationship</th><th>Today</th><th>Option 1</th><th>Option 2</th><th>Preferred</th></tr></thead>
+      <tbody>
+        <tr><th>Routing entry for a model</th><td>HTTPRoute, created by KServe</td><td><code>ModelProvider</code>, created by KServe</td><td><code>ModelProvider</code>, created by MaaS</td><td>Routing inline in the tenant's <code>Proxy</code>, written by MaaS</td></tr>
+        <tr><th>Its owner</th><td><code>LLMInferenceService</code>, through an <code>ownerReference</code></td><td>None. The service is in another namespace</td><td>MaaS, through the finalizer on <code>MaaSModelRef</code></td><td>The <code>Proxy</code>, which MaaS owns</td></tr>
+        <tr><th>Its writers</th><td>KServe for the spec, Istio for the status</td><td>KServe for the spec, MaaS and <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td></tr>
+        <tr><th>Source of the tenant</th><td><code>MaaSModelRef.spec.tenantRef</code>, or the route's parent Gateway</td><td>A lookup "through gatewayRef" from the service, not defined</td><td><code>MaaSModelRef.spec.tenantRef</code></td><td><code>MaaSModelRef.spec.tenantRef</code></td></tr>
+        <tr><th>What MaaS reads from KServe</th><td>The HTTPRoute and the service status</td><td>Not specified</td><td>The service status only</td><td>The service status only</td></tr>
+        <tr><th>What KServe has to know</th><td>The tenant Gateway</td><td>The tenant, and the Praxis <code>ModelProvider</code> type</td><td>Nothing new</td><td>Nothing new</td></tr>
+        <tr><th>Per-model token limit</th><td><code>TokenRateLimitPolicy</code> owned by the HTTPRoute</td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td></tr>
+        <tr><th>Writes outside the writer's own namespaces</th><td>MaaS writes policies into the model and the gateway namespaces</td><td>KServe writes the provider into the tenant namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The current setup is read from the MaaS, KServe and AGC code. The options describe objects that do not exist yet.</p>
+    <ul>
+      <li>Option 1 follows the proposal draft dated 2026-11-19. <code>Proxy</code> and <code>Policy</code> exist as types in <code>gateway-controller</code>, and <code>ModelProvider</code> does not.</li>
+      <li>The namespaces of the Praxis objects follow the example in the proposal, which places them in the tenant namespace.</li>
+      <li>In option 2, removing the provider through the existing finalizer on <code>MaaSModelRef</code> is new code. The finalizer and its cleanup hook exist.</li>
+      <li>Whether an <code>InferenceObjective</code> has an owner was not checked.</li>
+      <li>None of this was run on a cluster.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<div class="md-view" hidden>
+  <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
+  <pre class="md-source" tabindex="0"># Alternatives considered
+
+Decision record, Praxis data plane.
+
+Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the `ModelProvider`, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+
+## Reading the figures
+
+The figures use the same three columns, one per namespace, and the same marks.
+
+- The colour of a tile and the label in its header name who writes the object: a user or an admin, KServe, MaaS, `gateway-controller`, or the AI Gateway controller (AGC).
+- A tile indented under another is owned by it through an `ownerReference`.
+- A solid arrow is a reference held in a field. It points from the object that holds the field.
+- A dashed arrow is an action of a controller with no reference between the two objects.
+- Red marks a relationship that is listed under the figure as a problem.
+
+## Today: Gateway API with Kuadrant
+
+The HTTPRoute is the central object today. KServe creates it, the tenant Gateway admits it, and MaaS both reads it and attaches a policy to it. As a result, objects written by MaaS depend on an object that KServe owns.
+
+![Custom resources today, on Gateway API with Kuadrant](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-today.svg)
+
+The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRoute that KServe creates. `MaaSModelRef` takes its status from the same route.
+
+### Who does what, and why
+
+- KServe creates the HTTPRoute, the `InferencePool`, the EPP and the workload, and owns all of them through the `LLMInferenceService`. It derives `Ready` and the URL from the status Istio writes on the route and the pool.
+- MaaS reads the HTTPRoute and the service status to set the status of a `MaaSModelRef`. From a `MaaSAuthPolicy` it creates one `AuthPolicy` on the Gateway. From a `MaaSSubscription` it creates one `TokenRateLimitPolicy` per model, with the HTTPRoute as target and owner, and an `InferenceObjective` per pool.
+- AGC deploys `praxis-extproc` and its `EnvoyFilter` for the Gateway named in `AITenant.status.gatewayRef`.
+- Istio implements the Gateway and writes route and pool status. Kuadrant enforces the `AuthPolicy` and the rate limit policies.
+
+### Relationships that cause problems
+
+- A MaaS policy is owned by a KServe object. Deleting the HTTPRoute deletes the per-model rate limit.
+- MaaS depends on the HTTPRoute, which is an implementation detail of KServe, and not on the `LLMInferenceService` status.
+- The tenant is bound to a Gateway. An `AITenant` fails without one, and when `tenantRef` is empty the tenant of a model is looked up from the route's parent Gateway.
+
+## Option 1: KServe creates the ModelProvider
+
+Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it.
+
+![Custom resources in option 1, where KServe creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-option-1.svg)
+
+The `ModelProvider` is the only object in the tenant namespace that MaaS does not create. It has three writers: KServe for the spec, MaaS for `status.proxyRef`, and `gateway-controller` for readiness.
+
+### Who does what, and why
+
+- KServe creates the pool, the EPP and the workload as today, and one `ModelProvider` per service in the tenant namespace. It sets the tenant, the pool and the weight, and changes the weight during a canary.
+- MaaS creates the `Proxy` and the `Policy`, maps the `AITenant` to the `Proxy`, and sets `status.proxyRef` on each provider so that `gateway-controller` does not have to read the `AITenant`.
+- `gateway-controller` reads the `Proxy`, the `Policy` and the providers. It deploys the Praxis proxy, writes the routing config grouped by `publishedName`, and writes readiness on the provider.
+- The platform ingress forwards all traffic to the Praxis Service.
+
+### Why it is not preferred
+
+- KServe writes into a namespace it does not manage. An `ownerReference` cannot cross namespaces, so nothing ties the lifetime of the provider to the service.
+- KServe has no tenant. An `LLMInferenceService` has no tenant field, and resolving the tenant "through gatewayRef" requires a Gateway.
+- One object has three writers, and two of them write its status.
+- `MaaSModelRef`, `MaaSSubscription` and `MaaSAuthPolicy` have no defined role. One service can be published to several tenants today, which a single `aiTenantRef` cannot express.
+- `inferencePoolRef` holds only a name, while the pool is in another namespace.
+- MaaS still has to stop depending on the HTTPRoute, so the work in MaaS is not smaller.
+
+## Option 2: MaaS creates the ModelProvider
+
+In option 2 KServe publishes the backend in the `LLMInferenceService` status, and MaaS creates a `ModelProvider` for each `MaaSModelRef`. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace. It needs the `ModelProvider` API, which is open with no milestone ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)), so it is not preferred now. The preferred option uses the same contract with KServe and reaches this state when the API is adopted.
+
+![Custom resources in option 2, where MaaS creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-option-2.svg)
+
+MaaS writes every object in the tenant namespace, and KServe writes only next to the service. The one relationship that still crosses namespaces is the reference from the provider to its backend.
+
+### Who does what, and why
+
+- KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and `Ready` in status. It creates nothing in the tenant namespace and needs no tenant.
+- MaaS reads that status. For each `MaaSModelRef` it creates a `ModelProvider`, with the tenant taken from `spec.tenantRef`, and removes it through the cleanup finalizer it already has on `MaaSModelRef`. It creates the `Proxy` and the `Policy` from the tenant, the subscriptions and the auth policies.
+- `gateway-controller` does the same as in option 1, and no longer shares the status of the provider with MaaS.
+
+### Open points
+
+- The provider references a backend in another namespace. The Praxis design leaves that access to NetworkPolicy and admission policy.
+- No `ownerReference` links a `MaaSModelRef` to its provider either, because they are in different namespaces. The finalizer covers deletion.
+- When a service is stopped or deleted, KServe removes the pool and the Service immediately, but the provider stays in the Praxis configuration until MaaS removes it.
+- Canary weights need an owner: they are either copied from the service or defined in MaaS.
+
+## Comparison
+
+The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+
+| Relationship | Today | Option 1 | Option 2 | Preferred |
+|---|---|---|---|---|
+| Routing entry for a model | HTTPRoute, created by KServe | `ModelProvider`, created by KServe | `ModelProvider`, created by MaaS | Routing inline in the tenant's `Proxy`, written by MaaS |
+| Its owner | `LLMInferenceService`, through an `ownerReference` | None. The service is in another namespace | MaaS, through the finalizer on `MaaSModelRef` | The `Proxy`, which MaaS owns |
+| Its writers | KServe for the spec, Istio for the status | KServe for the spec, MaaS and `gateway-controller` for the status | MaaS for the spec, `gateway-controller` for the status | MaaS for the spec, `gateway-controller` for the status |
+| Source of the tenant | `MaaSModelRef.spec.tenantRef`, or the route's parent Gateway | A lookup "through gatewayRef" from the service, not defined | `MaaSModelRef.spec.tenantRef` | `MaaSModelRef.spec.tenantRef` |
+| What MaaS reads from KServe | The HTTPRoute and the service status | Not specified | The service status only | The service status only |
+| What KServe has to know | The tenant Gateway | The tenant, and the Praxis `ModelProvider` type | Nothing new | Nothing new |
+| Per-model token limit | `TokenRateLimitPolicy` owned by the HTTPRoute | Rules in the `Policy` | Rules in the `Policy` | Rules in the `Policy` |
+| Writes outside the writer's own namespaces | MaaS writes policies into the model and the gateway namespaces | KServe writes the provider into the tenant namespace | MaaS writes the `InferenceObjective` into the model namespace | MaaS writes the `InferenceObjective` into the model namespace |
+
+## Not verified
+
+The current setup is read from the MaaS, KServe and AGC code. The options describe objects that do not exist yet.
+
+- Option 1 follows the proposal draft dated 2026-11-19. `Proxy` and `Policy` exist as types in `gateway-controller`, and `ModelProvider` does not.
+- The namespaces of the Praxis objects follow the example in the proposal, which places them in the tenant namespace.
+- In option 2, removing the provider through the existing finalizer on `MaaSModelRef` is new code. The finalizer and its cleanup hook exist.
+- Whether an `InferenceObjective` has an owner was not checked.
+- None of this was run on a cluster.
+</pre>
+</div>
+
+<script>
+  (function () {
+    var control = document.querySelector(".view");
+    if (!control) return;
+    var page = document.querySelector(".page");
+    var view = document.querySelector(".md-view");
+    var source = view.querySelector(".md-source");
+    var status = view.querySelector(".md-status");
+    function show(name) {
+      var markdown = name === "markdown";
+      page.hidden = markdown;
+      view.hidden = !markdown;
+      control.querySelectorAll("input").forEach(function (input) { input.checked = input.value === name; });
+      try { history.replaceState(null, "", markdown ? "#markdown" : location.pathname + location.search); } catch (e) {}
+    }
+    control.querySelectorAll("input").forEach(function (input) {
+      input.addEventListener("change", function () { show(input.value); });
+    });
+    view.querySelector(".md-copy").addEventListener("click", function () {
+      function done(ok) { status.textContent = ok ? "Copied" : "Select the text and copy it"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(source.textContent).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+      var range = document.createRange();
+      range.selectNodeContents(source);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      done(ok);
+    });
+    control.hidden = false;
+    show(location.hash === "#markdown" ? "markdown" : "page");
+  })();
+</script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>

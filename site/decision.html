@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praxis decision</title>
+<meta name="description" content="The preferred option: MaaSModelRef stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant&#x27;s Proxy. What it gains, what it costs and what changes in KServe and MaaS.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column. Figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a problem, or the piece that carries the routing decision */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+      --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+    --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+  tbody th { font-weight: 600; width: 16%; }
+  .tbl.wide table { min-width: 920px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
+
+  /* diagram marks: tiles with a header strip, dashed groups and lanes with a tab, ownership rails, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
+  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
+  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
+  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
+  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-ico { color: var(--muted); }
+  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
+  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
+  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
+  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.px { stroke: var(--px); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
+  .d-rule { stroke: var(--line); stroke-width: 1; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+  .d-tile-b.ks { stroke: var(--ks); stroke-width: 1.6; }
+  .d-tile-b.maas { stroke: var(--maas); stroke-width: 1.6; }
+  .d-tile-b.gc { stroke: var(--gc); stroke-width: 1.6; }
+  .d-tile-b.agc { stroke: var(--agc); stroke-width: 1.6; }
+  .d-head.ks { fill: color-mix(in srgb, var(--ks) 13%, var(--panel)); }
+  .d-head.maas { fill: color-mix(in srgb, var(--maas) 13%, var(--panel)); }
+  .d-head.gc { fill: color-mix(in srgb, var(--gc) 13%, var(--panel)); }
+  .d-head.agc { fill: color-mix(in srgb, var(--agc) 15%, var(--panel)); }
+  .d-kind.ks { fill: var(--ks); } .d-kind.maas { fill: var(--maas); }
+  .d-kind.gc { fill: var(--gc); } .d-kind.agc { fill: var(--agc); }
+  .d-pill.maas { stroke: var(--maas); }
+  .d-pillt.maas { fill: var(--maas); }
+  .d-edge.maas { stroke: var(--maas); stroke-width: 2; }
+  .d-ah.maas { fill: var(--maas); }
+  .d-rail { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .d-rail.warn { stroke: var(--warn); stroke-width: 2; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .switch label { position: relative; display: block; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .switch input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .switch input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .md-view {
+    max-width: 1080px; margin: 0 auto; padding-top: 28px; padding-bottom: 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--sans);
+  }
+  .md-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .md-copy { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .md-copy:hover { background: var(--code-bg); }
+  .md-copy:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .md-status { font-size: 13px; color: var(--muted); }
+  .md-source { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html">Overview</a>
+    <a href="decision.html" aria-current="page">Praxis decision</a>
+    <a href="alternatives.html">Praxis alternatives</a>
+    <a href="context.html">Praxis context</a>
+    <a href="migration.html">Praxis migration</a>
+  </nav>
+  <div class="controls">
+    <div class="switch view" role="radiogroup" aria-label="View" hidden>
+      <label><input type="radio" name="view" value="page"><span>Page</span></label>
+      <label><input type="radio" name="view" value="markdown"><span>Markdown</span></label>
+    </div>
+    <div class="switch theme" role="radiogroup" aria-label="Theme" hidden>
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Decision record · Praxis data plane</div>
+  <h1>MaaSModelRef only, ModelProvider later</h1>
+  <p class="lede">Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps <code>MaaSModelRef</code> as the object users write. KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS writes the routing into the <code>Proxy</code> of the tenant. The <code>ModelProvider</code> API can be adopted later.</p>
+</header>
+
+<div class="answers">
+  <div>
+    <span class="q">Status</span>
+    <span class="a">Preferred option</span>
+    <p>It was discussed as option 3. Options 1 and 2 are described in <a href="alternatives.html">Praxis alternatives</a>.</p>
+  </div>
+  <div>
+    <span class="q">Decision</span>
+    <span class="a">MaaS writes the routing into the tenant's Proxy</span>
+    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, and MaaS reads it for each <code>MaaSModelRef</code>. No <code>ModelProvider</code> is created.</p>
+  </div>
+  <div>
+    <span class="q">Next step</span>
+    <span class="a">ModelProvider when its API is defined</span>
+    <p>MaaS then creates one provider per <code>MaaSModelRef</code>. Users and KServe change nothing.</p>
+  </div>
+</div>
+
+<section>
+  <div class="prose">
+    <h2>Context</h2>
+    <p>Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the <code>ModelProvider</code>, and its API is still open (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>). The request path, the problems the move exposes and the state of Praxis are described in <a href="context.html">Praxis context</a>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Decision</h2>
+    <p>We keep <code>MaaSModelRef</code> as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and <code>Ready</code>, with or without a route. MaaS reads that status and writes the routing of each published model into the <code>Proxy</code> of the tenant, next to the policy slot, and <code>gateway-controller</code> renders it. No <code>ModelProvider</code> is created.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 512" role="img" aria-label="Custom resources in the preferred option. There is no ModelProvider. MaaS reads the LLMInferenceService status and writes the routing of each MaaSModelRef inline in the Proxy of the tenant, which gateway-controller renders. KServe writes only in the model namespace.">
+        <defs>
+        <marker id="r4-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r4-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r4-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="r4-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        </defs>
+        <rect class="d-grp " x="774" y="54" width="250" height="170" rx="12"/>
+        <rect class="d-grp " x="395" y="54" width="250" height="372" rx="12"/>
+        <rect class="d-grp " x="16" y="54" width="250" height="356" rx="12"/>
+        <line class="d-rail " x1="414.0" y1="226" x2="414.0" y2="323.0"/>
+        <line class="d-rail " x1="414.0" y1="261.0" x2="421" y2="261.0"/>
+        <line class="d-rail " x1="414.0" y1="323.0" x2="421" y2="323.0"/>
+        <polyline class="d-edge " points="407,92 254,92" marker-end="url(#r4-ah)"/>
+        <polyline class="d-edge " points="254,167.0 292,167.0"/>
+        <polyline class="d-edge " points="254,229.0 292,229.0 292,116 407,116" marker-end="url(#r4-ah)"/>
+        <polyline class="d-edge maas dash" points="407,140 330,140 330,280 254,280" marker-end="url(#r4-ah-maas)"/>
+        <polyline class="d-edge " points="254,320 374,320 374,261.0 421,261.0" marker-end="url(#r4-ah)"/>
+        <polyline class="d-edge  dash" points="786,175.0 710,175.0 710,269.0 633,269.0" marker-end="url(#r4-ah)"/>
+        <rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+        <rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="94.5">AITenant</text>
+        <text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+        <text class="d-s" x="40" y="120">maps the tenant to its Proxy</text>
+        <rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+        <rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+        <text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="182">token limits per model</text>
+        <rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+        <rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+        <text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="244">who may call which model</text>
+        <rect class="d-tile" x="28" y="264" width="226" height="70" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+        <rect class="d-tile-b maas" x="28" y="264" width="226" height="70" rx="8"/>
+        <text class="d-kind maas" x="40" y="280.5">Proxy</text>
+        <text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="306">policy slot: the Policy</text>
+        <text class="d-s" x="40" y="322">routing: inline, for all models</text>
+        <rect class="d-tile" x="28" y="342" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head maas" d="M28.6 366V350Q28.6 342.6 36 342.6H246Q253.4 342.6 253.4 350V366Z"/>
+        <rect class="d-tile-b maas" x="28" y="342" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="40" y="358.5">Policy</text>
+        <text class="d-own" x="244" y="358" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="384">from subscriptions, auth policies</text>
+        <rect class="d-tab " x="30" y="44" width="123" height="20" rx="5"/>
+        <text class="d-tabt" x="91.5" y="58" text-anchor="middle">Tenant namespace</text>
+        <rect class="d-tile" x="407" y="78" width="226" height="70" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+        <rect class="d-tile-b " x="407" y="78" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+        <text class="d-own" x="623" y="94" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="120">modelRef: LLMInferenceService</text>
+        <text class="d-s" x="419" y="136">the only object per published model</text>
+        <rect class="d-tile" x="407" y="156" width="226" height="70" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M407.6 180V164Q407.6 156.6 415 156.6H625Q632.4 156.6 632.4 164V180Z"/>
+        <rect class="d-tile-b " x="407" y="156" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="172.5">LLMInferenceService</text>
+        <text class="d-own" x="623" y="172" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="198">status: backend, port,</text>
+        <text class="d-s" x="419" y="214">model names, Ready</text>
+        <rect class="d-tile" x="421" y="234" width="212" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head ks" d="M421.6 258V242Q421.6 234.6 429 234.6H625Q632.4 234.6 632.4 242V258Z"/>
+        <rect class="d-tile-b ks" x="421" y="234" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="250.5">InferencePool</text>
+        <text class="d-own" x="623" y="250" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="276">endpointPickerRef: EPP Service</text>
+        <rect class="d-tile" x="421" y="296" width="212" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head ks" d="M421.6 320V304Q421.6 296.6 429 296.6H625Q632.4 296.6 632.4 304V320Z"/>
+        <rect class="d-tile-b ks" x="421" y="296" width="212" height="54" rx="8"/>
+        <text class="d-kind ks" x="433" y="312.5">EPP, workload</text>
+        <text class="d-own" x="623" y="312" text-anchor="end">KServe</text>
+        <text class="d-s" x="433" y="338">Deployments and Services</text>
+        <rect class="d-tile" x="407" y="358" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head maas" d="M407.6 382V366Q407.6 358.6 415 358.6H625Q632.4 358.6 632.4 366V382Z"/>
+        <rect class="d-tile-b maas" x="407" y="358" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="419" y="374.5">InferenceObjective</text>
+        <text class="d-own" x="623" y="374" text-anchor="end">MaaS</text>
+        <text class="d-s" x="419" y="400">poolRef: InferencePool</text>
+        <rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+        <text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+        <rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+        <rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="94.5">Platform ingress</text>
+        <text class="d-own" x="1002" y="94" text-anchor="end">platform</text>
+        <text class="d-s" x="798" y="120">forwards to the Praxis Service</text>
+        <rect class="d-tile" x="786" y="140" width="226" height="70" rx="8" filter="url(#r4-sh)"/>
+        <path class="d-head gc" d="M786.6 164V148Q786.6 140.6 794 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+        <rect class="d-tile-b gc" x="786" y="140" width="226" height="70" rx="8"/>
+        <text class="d-kind gc" x="798" y="156.5">Praxis proxy</text>
+        <text class="d-own" x="1002" y="156" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="182">rendered from Proxy and Policy,</text>
+        <text class="d-s" x="798" y="198">restarts on a routing change</text>
+        <rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="852.5" y="58" text-anchor="middle">Praxis data plane</text>
+        <rect class="d-pill " x="296.0" y="83" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="330" y="95.6" text-anchor="middle">tenantRef</text>
+        <rect class="d-pill " x="316.0" y="107" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="350" y="119.6" text-anchor="middle">modelRefs</text>
+        <rect class="d-pill maas" x="268.0" y="231" width="124" height="18" rx="9"/>
+        <text class="d-pillt maas" x="330" y="243.6" text-anchor="middle">MaaS writes routing</text>
+        <rect class="d-pill " x="345.5" y="283" width="57" height="18" rx="9"/>
+        <text class="d-pillt " x="374" y="295.6" text-anchor="middle">backend</text>
+        <rect class="d-pill " x="676.0" y="216" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="710" y="228.6" text-anchor="middle">routes to</text>
+        <rect class="d-legend" x="16" y="446" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="456.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b " x="32" y="456.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="465.8">user or admin</text>
+        <rect class="d-tile" x="160.7" y="456.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b ks" x="160.7" y="456.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="186.7" y="465.8">KServe</text>
+        <rect class="d-tile" x="248.1" y="456.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b maas" x="248.1" y="456.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="274.1" y="465.8">MaaS</text>
+        <rect class="d-tile" x="323.7" y="456.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b gc" x="323.7" y="456.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="349.7" y="465.8">gateway-controller</text>
+        <polyline class="d-rail " points="483.9,455.0 483.9,465.0 495.9,465.0"/>
+        <text class="d-lg" x="503.9" y="465.8">owned through an ownerReference</text>
+        <line class="d-edge " x1="712.8" y1="462.0" x2="742.8" y2="462.0" marker-end="url(#r4-ah)"/>
+        <text class="d-lg" x="750.8" y="465.8">reference held in a field</text>
+        <line class="d-edge  dash" x1="32" y1="484.0" x2="62" y2="484.0" marker-end="url(#r4-ah)"/>
+        <text class="d-lg" x="70" y="487.8">controller action, no reference</text>
+        <rect class="d-grp " x="278.9" y="478.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="304.9" y="487.8">namespace</text>
+      </svg>
+    </div>
+    <figcaption>No object represents the routing of a single model. It is part of the <code>Proxy</code>, which MaaS already writes. The marks are explained in <a href="alternatives.html">Praxis alternatives</a>.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>The user writes the same <code>MaaSModelRef</code> as today. Its spec needs no new field, because the backend, the port and the model names come from the service status. Its <code>httpRoute*</code> status fields have no source without a route.</li>
+          <li>KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and <code>Ready</code> in status. It creates nothing in the tenant namespace and needs no tenant.</li>
+          <li>MaaS reads that status and writes the routing of every published model of a tenant into the tenant's <code>Proxy</code>, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined". MaaS creates the <code>Policy</code> from the subscriptions and the auth policies.</li>
+          <li><code>gateway-controller</code> renders the <code>Proxy</code> and the <code>Policy</code>. It does not need the <code>ModelProvider</code> type, which is not implemented yet (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Benefits</h2>
+    <ul>
+      <li>One contract between MaaS and KServe: the <code>LLMInferenceService</code> status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.</li>
+      <li>One writer per object. MaaS writes every object in the tenant namespace, and KServe writes only next to the service.</li>
+      <li>Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.</li>
+      <li>No dependency on the <code>ModelProvider</code> API. It is open with no milestone, and this option needs the <code>Proxy</code> and the <code>Policy</code> only.</li>
+      <li>Nothing changes in what users and the dashboard write. <code>MaaSModelRef</code> needs no new spec field.</li>
+      <li>Several tenants per service need no extra API. One service can be published to several tenants today, with one <code>MaaSModelRef</code> each.</li>
+      <li>The <code>ModelProvider</code> can be adopted later without a change for users or for KServe, because the contract with KServe and the user-facing objects stay the same.</li>
+      <li>It follows existing practice. MaaS already reads <code>status.router.scheduler.inferencePool</code> and writes an <code>InferenceObjective</code> per pool.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Costs and limits</h2>
+    <ul>
+      <li>In the current draft a routing change rolls the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy (<a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.</li>
+      <li>Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.</li>
+      <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
+      <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>.</li>
+      <li>A service without a <code>MaaSModelRef</code> has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.</li>
+      <li>Stopping or deleting a service removes its pool and its Service immediately. MaaS has to remove the routing entry at the same time.</li>
+      <li>Canary weights need an owner. They are either read from <code>group</code> and <code>weight</code> on the service, or defined in MaaS. We would not add a weight field to <code>MaaSModelRef</code>, because it would compete with the weight of a <code>ModelProvider</code> later.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Adopting the ModelProvider later</h2>
+    <p>The preferred option is the first step towards option 2 in <a href="alternatives.html">Praxis alternatives</a>, where MaaS creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>. The step can be taken when the API is defined and implemented.</p>
+    <ul>
+      <li><code>gateway-controller</code> adds the type, its controller and the routing that is generated from it.</li>
+      <li>MaaS stops writing routing entries into the <code>Proxy</code>, creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>, and hands the routing slot of the tenant to <code>gateway-controller</code>.</li>
+      <li>KServe changes nothing, because the status contract is the same.</li>
+      <li>Users change nothing, because <code>MaaSModelRef</code> stays the object they write. The Praxis design maps it the same way: a <code>MaaSModelRef</code> becomes a <code>Model</code> and a <code>ModelProvider</code> (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L549" target="_blank" rel="noopener"><code>docs/design/api.md:549</code></a>).</li>
+      <li>Which <code>ModelProvider</code> arrives is open. The design in the repository and the proposal describe different fields, and the design leaves weighting and failover out of scope (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387" target="_blank" rel="noopener"><code>docs/design/api-v1alpha1.md:386-387</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Changes in upstream KServe</h2>
+    <p>KServe creates no new objects. It has to publish complete status for a service without a route: today such a service with a scheduler never becomes <code>Ready</code>, and its status does not include the pool. We read this from <a href="https://github.com/kserve/kserve" target="_blank" rel="noopener"><code>kserve/kserve</code></a> master at <a href="https://github.com/kserve/kserve/commit/cdbe9860583e36f29d46a58179d86299e8faa41d" target="_blank" rel="noopener"><code>cdbe986058</code></a>, in the files under <code>pkg/controller/v1alpha2/llmisvc/</code>. The sizes are estimates from reading the code. None of it has been implemented.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Change</th><th>Today</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>Mark a service with a scheduler and no route <code>Ready</code>, and publish its pool in <code>status.router.scheduler</code> with the v1 API group. One PR.</td><td>It stays <code>InferencePoolReady=False</code> with reason <code>WaitingForGateway</code> (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L801" target="_blank" rel="noopener"><code>router.go:801</code></a>, <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L975" target="_blank" rel="noopener"><code>:975</code></a>), and <code>status.router</code> is cleared (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L484" target="_blank" rel="noopener"><code>router.go:484</code></a>). Both changes have to ship together because MaaS interprets "<code>Ready</code> and no pool in status" as a service without a scheduler.</td><td class="num">Small, status only</td></tr>
+        <tr><td>Publish served model names on the address of a service with no route.</td><td><code>status.addresses[].models</code> is filled from gateway URLs only (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router_discovery_filter.go#L90-L157" target="_blank" rel="noopener"><code>router_discovery_filter.go:90-157</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Add the port to that address, and clear <code>status.url</code> when the route is removed.</td><td>The address is the workload Service host with no port, and the Service listens on 8000 (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L493-L500" target="_blank" rel="noopener"><code>router.go:493-500</code></a>). <code>status.url</code> is only written when there is a route (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L545-L550" target="_blank" rel="noopener"><code>router.go:545-550</code></a>), so AFAICT it keeps its old value once the route is removed.</td><td class="num">Small</td></tr>
+        <tr><td>Skip the managed HTTPRoute for a Gateway that opts in, and treat the service as one with no route.</td><td>The route is always rendered when <code>spec.router.route</code> is set. A switch per Gateway has a precedent: <code>serving.kserve.io/model-based-routing-only</code> is read from the parent Gateway (<a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83" target="_blank" rel="noopener"><code>router.go:83</code></a>).</td><td class="num">Small to medium</td></tr>
+        <tr><td>Optional: allow <code>group</code> and <code>weight</code> without a route.</td><td>They are fields of <code>spec.router.route</code>, released in v0.20.0. Validation, defaults, labels and group status all assume a route. The alternative with no KServe change is weights held by MaaS.</td><td class="num">Medium to large</td></tr>
+        <tr><td>No change for the workload Service.</td><td>It is already in <code>status.workloads.service</code>, and a service with no scheduler and no route is already <code>Ready</code>.</td><td class="num">None</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>Open PR <a href="https://github.com/kserve/kserve/pull/5972" target="_blank" rel="noopener"><code>kserve/kserve#5972</code></a> covers a service with <code>gateway.refs</code> and no route (issue <a href="https://github.com/kserve/kserve/issues/5986" target="_blank" rel="noopener"><code>#5986</code></a>). A service with no route and no refs is not covered.</li>
+      <li>Do not make readiness wait for Praxis. MaaS waits for <code>Ready</code> before it writes the routing entry, which would create a circular dependency.</li>
+      <li>ODH build: reconcile the scheduler before the Kuadrant auth check. Today the check returns first, so with the <code>AuthPolicy</code> CRD gone no EPP is created for a service with auth enabled.</li>
+      <li>ODH build: give strict NetworkPolicy a way to allow the proxy's namespace. Today it takes the allowed namespaces from Gateway references only.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Changes in MaaS</h2>
+    <p>MaaS has the larger share of the work. It derives nearly all model information from the HTTPRoute today, so that dependency has to be removed first. Most rows are needed for any integration with Praxis, and only the last three follow from MaaS writing the routing. This comes from <a href="https://github.com/opendatahub-io/models-as-a-service" target="_blank" rel="noopener"><code>opendatahub-io/models-as-a-service</code></a> at <a href="https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be" target="_blank" rel="noopener"><code>e0afdbc</code></a>, and paths are under <code>maas-controller/pkg/controller/maas/</code> unless they say otherwise.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Change</th><th>Today</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>Read the backend, the port, the model names and <code>Ready</code> from the <code>LLMInferenceService</code> status. Stop looking up the HTTPRoute.</td><td>MaaS finds the route by label and requires the tenant Gateway as its parent (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L45-L115" target="_blank" rel="noopener"><code>providers_llmisvc.go:45-115</code></a>). No route means <code>Pending</code>, "Waiting for HTTPRoute to be created" (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L199-L218" target="_blank" rel="noopener"><code>maasmodelref_controller.go:199-218</code></a>).</td><td class="num">Medium</td></tr>
+        <tr><td>Take a model's endpoint from the tenant's ingress host, and rename the <code>httpRoute*</code> status fields.</td><td>The endpoint comes from route hostnames or Gateway listeners (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L154-L190" target="_blank" rel="noopener"><code>providers_llmisvc.go:154-190</code></a>). <code>maas-api</code> builds the model URL from <code>status.httpRouteHostnames[0]</code> (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-api/internal/models/maasmodelref.go#L127-L132" target="_blank" rel="noopener"><code>maas-api/internal/models/maasmodelref.go:127-132</code></a>).</td><td class="num">Medium, API change</td></tr>
+        <tr><td>Resolve the tenant from the service's <code>gateway.refs</code> when <code>spec.tenantRef</code> is empty.</td><td>It is looked up from the route's parent Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L1087-L1204" target="_blank" rel="noopener"><code>maasmodelref_controller.go:1087-1204</code></a>). The dashboard never sets <code>tenantRef</code>, so it has to stay optional.</td><td class="num">Small</td></tr>
+        <tr><td>Write the <code>InferenceObjective</code> without checking the route.</td><td>It is only written when the model's route is on the tenant Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L396-L408" target="_blank" rel="noopener"><code>maassubscription_inferenceobjective.go:396-408</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Generate per-model token limits that do not attach to a route.</td><td>The rate limit policy targets the HTTPRoute and has it as owner (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_controller.go#L806-L816" target="_blank" rel="noopener"><code>maassubscription_controller.go:806-816</code></a>). Praxis has to support a limit per model first.</td><td class="num">New</td></tr>
+        <tr><td>Generate a Praxis <code>Policy</code> from <code>MaaSAuthPolicy</code>.</td><td>It becomes a Kuadrant <code>AuthPolicy</code> that targets the tenant Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasauthpolicy_controller.go#L1458-L1463" target="_blank" rel="noopener"><code>maasauthpolicy_controller.go:1458-1463</code></a>). Kubernetes token auth waits on <a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a>.</td><td class="num">New</td></tr>
+        <tr><td>Let an <code>AITenant</code> work without a Gateway, and create a <code>Proxy</code> and a <code>Policy</code> for it.</td><td>The tenant is set to <code>Failed</code> when its Gateway check fails (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/aitenant_controller.go#L225-L232" target="_blank" rel="noopener"><code>aitenant_controller.go:225-232</code></a>), and it has no field for a <code>Proxy</code>.</td><td class="num">New</td></tr>
+        <tr><td>Decide where <code>maas-api</code> is served.</td><td>Through the tenant Gateway, by its own HTTPRoute (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/tenant_reconcile.go#L745-L749" target="_blank" rel="noopener"><code>tenant_reconcile.go:745-749</code></a>). Its paths include <code>/maas-api</code>, <code>/v1/models</code> and <code>/v1/api-keys</code>.</td><td class="num">Decision</td></tr>
+        <tr><td>Write a routing entry for each <code>MaaSModelRef</code> into the tenant's <code>Proxy</code>, and remove it when the service stops or is deleted.</td><td>MaaS already does the same for an <code>InferenceObjective</code> per pool (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L177-L250" target="_blank" rel="noopener"><code>maassubscription_inferenceobjective.go:177-250</code></a>). It needs RBAC and a watch for the Praxis types.</td><td class="num">Medium</td></tr>
+        <tr><td>Use the current model ID as the routing key.</td><td><code>ResolveModelAlias</code> takes it from the service's status addresses, or builds <code>publishers/{ns}/models/{name}</code> from the spec (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L330-L348" target="_blank" rel="noopener"><code>providers_llmisvc.go:330-348</code></a>).</td><td class="num">Small</td></tr>
+        <tr><td>Decide which component owns canary weights.</td><td><code>MaaSModelRef</code> has no weight, and two refs in one tenant with the same model ID are a conflict (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/model_identity_conflict.go#L33-L56" target="_blank" rel="noopener"><code>model_identity_conflict.go:33-56</code></a>).</td><td class="num">Decision, then new</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>MaaS has no Praxis control-plane code today. Nothing in the repository refers to <code>praxis.io</code>.</li>
+      <li>Grid in <a href="https://github.com/opendatahub-io/odh-model-controller" target="_blank" rel="noopener"><code>odh-model-controller</code></a> needs the first change too: it stops publishing a provider when <code>status.router</code> is empty (<a href="https://github.com/opendatahub-io/odh-model-controller/blob/a67a53c9d80915e428ac62c3dbab3e4b38961b00/internal/controller/serving/llm/grid_controller.go#L759-L768" target="_blank" rel="noopener"><code>grid_controller.go:759-768</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Impact on users and the dashboard</h2>
+    <p>The goal is that users and the dashboard notice nothing. While the route and the routing in Praxis exist in parallel, nothing changes for them. The end state needs care, because the dashboard and MaaS both rely on fields that a service without a route would no longer have. Keeping those fields, and letting KServe skip the route for a Gateway that opts in, avoids that.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>What users and the dashboard touch</th><th>Today</th><th>Risk in the end state</th><th>How it stays unchanged</th></tr></thead>
+      <tbody>
+        <tr><td><code>spec.router.route</code> and <code>spec.router.gateway.refs</code> on the service</td><td>The dashboard writes <code>router: {route: {}, gateway: {}}</code> on every new service and adds <code>maas-default-gateway</code> when the user selects MaaS. It decides whether a service is published to MaaS from that reference.</td><td>If the reference is removed, the next edit and save in the dashboard deletes the <code>MaaSModelRef</code>.</td><td>Keep both fields. KServe skips the managed route for a Gateway that opts in.</td></tr>
+        <tr><td><code>spec.tenantRef</code> on <code>MaaSModelRef</code></td><td>The dashboard never sets it, and the MaaS documentation says to omit it. MaaS looks the tenant up from the route's parent Gateway.</td><td>Making the field required breaks what the dashboard creates.</td><td>MaaS resolves the tenant from the service's <code>gateway.refs</code>.</td></tr>
+        <tr><td>Endpoint URL and hostname</td><td>Taken from route hostnames, Gateway listeners or the service status.</td><td>The hostname changes if Praxis is exposed without the tenant Gateway.</td><td>The tenant Gateway stays as the ingress in front of Praxis, and KServe keeps the Gateway host in <code>status.url</code> and <code>status.addresses</code>.</td></tr>
+        <tr><td>Model ID in <code>/v1/models</code></td><td><code>status.resolvedModelAlias</code> of the <code>MaaSModelRef</code>.</td><td>A changed ID breaks clients.</td><td>The routing key equals the alias.</td></tr>
+        <tr><td><code>MaaSSubscription</code> and <code>MaaSAuthPolicy</code></td><td>Written by admins, and turned into Kuadrant policies.</td><td>None in the spec.</td><td>No change. MaaS generates the Praxis <code>Policy</code> from the same objects.</td></tr>
+        <tr><td><code>AITenant.spec.gateway</code></td><td>Names the tenant Gateway.</td><td>None while the Gateway stays.</td><td>No change.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h3>What cannot be hidden</h3>
+    <ul>
+      <li>Per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working unless Praxis serves paths. Setting <code>serving.kserve.io/model-based-routing-only</code> on a Gateway has the same effect for clients today, so it can be used to find affected clients first.</li>
+      <li>The Kuadrant objects disappear, together with the documented <code>kubectl get authpolicy</code> and <code>tokenratelimitpolicy</code> checks and the status fields that list those objects.</li>
+      <li>The <code>HTTPRoute</code> column of <code>MaaSModelRef</code> is empty, and two steps disappear from the progress list in the dashboard.</li>
+      <li>AFAICT rate limit counters restart at the cut-over.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Migration</h2>
+    <p>A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in <a href="migration.html">Praxis migration</a>, which is a work in progress.</p>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The decision is based on reading code, issues and the proposal. The following was not verified.</p>
+    <ul>
+      <li>Nothing was run on a cluster. How services with no route behave is read from code. Two KServe unit tests covering the readiness path were run and pass.</li>
+      <li>That routing can stay MaaS-defined is taken from a remark in the proposal. What an inline filter chain in a <code>Proxy</code> can express was read from the types, and nothing renders it yet.</li>
+      <li>The pod roll on a routing change is read from the draft <a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a> at <a href="https://github.com/praxis-proxy/gateway-controller/commit/aa8180fdf5734289cfdfcfd6efcd6a744e41b485" target="_blank" rel="noopener"><code>aa8180f</code></a>. It was not run, and the draft can change before it merges.</li>
+      <li>The dashboard was read on <code>main</code> at <a href="https://github.com/opendatahub-io/odh-dashboard/tree/16366ea36ccdeb8f4417c9154e724682dd45b73b" target="_blank" rel="noopener"><code>16366ea</code></a>. Its release branches were not read, and nothing was exercised in a browser.</li>
+      <li>The MaaS change list comes from a single read of the code. We rechecked the rows about the route, the rate limit policy, <code>maas-api</code>, the <code>InferenceObjective</code> and the tenant Gateway, and took the rest from the note.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<div class="md-view" hidden>
+  <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
+  <pre class="md-source" tabindex="0"># MaaSModelRef only, ModelProvider later
+
+Decision record, Praxis data plane.
+
+Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps `MaaSModelRef` as the object users write. KServe publishes the backend in the `LLMInferenceService` status, and MaaS writes the routing into the `Proxy` of the tenant. The `ModelProvider` API can be adopted later.
+
+| Topic | Summary | Detail |
+|---|---|---|
+| Status | Preferred option | It was discussed as option 3. Options 1 and 2 are described in [Praxis alternatives](https://bartoszmajsak.github.io/kserve-praxis-integration/alternatives.html). |
+| Decision | MaaS writes the routing into the tenant's Proxy | KServe publishes the backend, the port, the model names and `Ready` in the service status, and MaaS reads it for each `MaaSModelRef`. No `ModelProvider` is created. |
+| Next step | ModelProvider when its API is defined | MaaS then creates one provider per `MaaSModelRef`. Users and KServe change nothing. |
+
+## Context
+
+Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the `ModelProvider`, and its API is still open ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). The request path, the problems the move exposes and the state of Praxis are described in [Praxis context](https://bartoszmajsak.github.io/kserve-praxis-integration/context.html).
+
+## Decision
+
+We keep `MaaSModelRef` as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and `Ready`, with or without a route. MaaS reads that status and writes the routing of each published model into the `Proxy` of the tenant, next to the policy slot, and `gateway-controller` renders it. No `ModelProvider` is created.
+
+![Custom resources in the preferred option, where MaaS writes the routing and no ModelProvider exists](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-option-3.svg)
+
+No object represents the routing of a single model. It is part of the `Proxy`, which MaaS already writes. The marks are explained in [Praxis alternatives](https://bartoszmajsak.github.io/kserve-praxis-integration/alternatives.html).
+
+### Who does what, and why
+
+- The user writes the same `MaaSModelRef` as today. Its spec needs no new field, because the backend, the port and the model names come from the service status. Its `httpRoute*` status fields have no source without a route.
+- KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and `Ready` in status. It creates nothing in the tenant namespace and needs no tenant.
+- MaaS reads that status and writes the routing of every published model of a tenant into the tenant's `Proxy`, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined". MaaS creates the `Policy` from the subscriptions and the auth policies.
+- `gateway-controller` renders the `Proxy` and the `Policy`. It does not need the `ModelProvider` type, which is not implemented yet ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)).
+
+## Benefits
+
+- One contract between MaaS and KServe: the `LLMInferenceService` status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.
+- One writer per object. MaaS writes every object in the tenant namespace, and KServe writes only next to the service.
+- Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.
+- No dependency on the `ModelProvider` API. It is open with no milestone, and this option needs the `Proxy` and the `Policy` only.
+- Nothing changes in what users and the dashboard write. `MaaSModelRef` needs no new spec field.
+- Several tenants per service need no extra API. One service can be published to several tenants today, with one `MaaSModelRef` each.
+- The `ModelProvider` can be adopted later without a change for users or for KServe, because the contract with KServe and the user-facing objects stay the same.
+- It follows existing practice. MaaS already reads `status.router.scheduler.inferencePool` and writes an `InferenceObjective` per pool.
+
+## Costs and limits
+
+- In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
+- Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
+- All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
+- The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
+- A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
+- Stopping or deleting a service removes its pool and its Service immediately. MaaS has to remove the routing entry at the same time.
+- Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+
+## Adopting the ModelProvider later
+
+The preferred option is the first step towards option 2 in [Praxis alternatives](https://bartoszmajsak.github.io/kserve-praxis-integration/alternatives.html), where MaaS creates one `ModelProvider` per `MaaSModelRef`. The step can be taken when the API is defined and implemented.
+
+- `gateway-controller` adds the type, its controller and the routing that is generated from it.
+- MaaS stops writing routing entries into the `Proxy`, creates one `ModelProvider` per `MaaSModelRef`, and hands the routing slot of the tenant to `gateway-controller`.
+- KServe changes nothing, because the status contract is the same.
+- Users change nothing, because `MaaSModelRef` stays the object they write. The Praxis design maps it the same way: a `MaaSModelRef` becomes a `Model` and a `ModelProvider` ([`docs/design/api.md:549`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L549)).
+- Which `ModelProvider` arrives is open. The design in the repository and the proposal describe different fields, and the design leaves weighting and failover out of scope ([`docs/design/api-v1alpha1.md:386-387`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387)).
+
+## Changes in upstream KServe
+
+KServe creates no new objects. It has to publish complete status for a service without a route: today such a service with a scheduler never becomes `Ready`, and its status does not include the pool. We read this from [`kserve/kserve`](https://github.com/kserve/kserve) master at [`cdbe986058`](https://github.com/kserve/kserve/commit/cdbe9860583e36f29d46a58179d86299e8faa41d), in the files under `pkg/controller/v1alpha2/llmisvc/`. The sizes are estimates from reading the code. None of it has been implemented.
+
+| Change | Today | Size |
+|---|---|---|
+| Mark a service with a scheduler and no route `Ready`, and publish its pool in `status.router.scheduler` with the v1 API group. One PR. | It stays `InferencePoolReady=False` with reason `WaitingForGateway` ([`router.go:801`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L801), [`:975`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L975)), and `status.router` is cleared ([`router.go:484`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L484)). Both changes have to ship together because MaaS interprets "`Ready` and no pool in status" as a service without a scheduler. | Small, status only |
+| Publish served model names on the address of a service with no route. | `status.addresses[].models` is filled from gateway URLs only ([`router_discovery_filter.go:90-157`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router_discovery_filter.go#L90-L157)). | Small |
+| Add the port to that address, and clear `status.url` when the route is removed. | The address is the workload Service host with no port, and the Service listens on 8000 ([`router.go:493-500`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L493-L500)). `status.url` is only written when there is a route ([`router.go:545-550`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L545-L550)), so AFAICT it keeps its old value once the route is removed. | Small |
+| Skip the managed HTTPRoute for a Gateway that opts in, and treat the service as one with no route. | The route is always rendered when `spec.router.route` is set. A switch per Gateway has a precedent: `serving.kserve.io/model-based-routing-only` is read from the parent Gateway ([`router.go:83`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83)). | Small to medium |
+| Optional: allow `group` and `weight` without a route. | They are fields of `spec.router.route`, released in v0.20.0. Validation, defaults, labels and group status all assume a route. The alternative with no KServe change is weights held by MaaS. | Medium to large |
+| No change for the workload Service. | It is already in `status.workloads.service`, and a service with no scheduler and no route is already `Ready`. | None |
+
+- Open PR [`kserve/kserve#5972`](https://github.com/kserve/kserve/pull/5972) covers a service with `gateway.refs` and no route (issue [`#5986`](https://github.com/kserve/kserve/issues/5986)). A service with no route and no refs is not covered.
+- Do not make readiness wait for Praxis. MaaS waits for `Ready` before it writes the routing entry, which would create a circular dependency.
+- ODH build: reconcile the scheduler before the Kuadrant auth check. Today the check returns first, so with the `AuthPolicy` CRD gone no EPP is created for a service with auth enabled.
+- ODH build: give strict NetworkPolicy a way to allow the proxy's namespace. Today it takes the allowed namespaces from Gateway references only.
+
+## Changes in MaaS
+
+MaaS has the larger share of the work. It derives nearly all model information from the HTTPRoute today, so that dependency has to be removed first. Most rows are needed for any integration with Praxis, and only the last three follow from MaaS writing the routing. This comes from [`opendatahub-io/models-as-a-service`](https://github.com/opendatahub-io/models-as-a-service) at [`e0afdbc`](https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be), and paths are under `maas-controller/pkg/controller/maas/` unless they say otherwise.
+
+| Change | Today | Size |
+|---|---|---|
+| Read the backend, the port, the model names and `Ready` from the `LLMInferenceService` status. Stop looking up the HTTPRoute. | MaaS finds the route by label and requires the tenant Gateway as its parent ([`providers_llmisvc.go:45-115`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L45-L115)). No route means `Pending`, "Waiting for HTTPRoute to be created" ([`maasmodelref_controller.go:199-218`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L199-L218)). | Medium |
+| Take a model's endpoint from the tenant's ingress host, and rename the `httpRoute*` status fields. | The endpoint comes from route hostnames or Gateway listeners ([`providers_llmisvc.go:154-190`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L154-L190)). `maas-api` builds the model URL from `status.httpRouteHostnames[0]` ([`maas-api/internal/models/maasmodelref.go:127-132`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-api/internal/models/maasmodelref.go#L127-L132)). | Medium, API change |
+| Resolve the tenant from the service's `gateway.refs` when `spec.tenantRef` is empty. | It is looked up from the route's parent Gateway ([`maasmodelref_controller.go:1087-1204`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasmodelref_controller.go#L1087-L1204)). The dashboard never sets `tenantRef`, so it has to stay optional. | Small |
+| Write the `InferenceObjective` without checking the route. | It is only written when the model's route is on the tenant Gateway ([`maassubscription_inferenceobjective.go:396-408`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L396-L408)). | Small |
+| Generate per-model token limits that do not attach to a route. | The rate limit policy targets the HTTPRoute and has it as owner ([`maassubscription_controller.go:806-816`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_controller.go#L806-L816)). Praxis has to support a limit per model first. | New |
+| Generate a Praxis `Policy` from `MaaSAuthPolicy`. | It becomes a Kuadrant `AuthPolicy` that targets the tenant Gateway ([`maasauthpolicy_controller.go:1458-1463`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maasauthpolicy_controller.go#L1458-L1463)). Kubernetes token auth waits on [`policy#213`](https://github.com/praxis-proxy/policy/issues/213). | New |
+| Let an `AITenant` work without a Gateway, and create a `Proxy` and a `Policy` for it. | The tenant is set to `Failed` when its Gateway check fails ([`aitenant_controller.go:225-232`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/aitenant_controller.go#L225-L232)), and it has no field for a `Proxy`. | New |
+| Decide where `maas-api` is served. | Through the tenant Gateway, by its own HTTPRoute ([`tenant_reconcile.go:745-749`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/tenant_reconcile.go#L745-L749)). Its paths include `/maas-api`, `/v1/models` and `/v1/api-keys`. | Decision |
+| Write a routing entry for each `MaaSModelRef` into the tenant's `Proxy`, and remove it when the service stops or is deleted. | MaaS already does the same for an `InferenceObjective` per pool ([`maassubscription_inferenceobjective.go:177-250`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/maassubscription_inferenceobjective.go#L177-L250)). It needs RBAC and a watch for the Praxis types. | Medium |
+| Use the current model ID as the routing key. | `ResolveModelAlias` takes it from the service's status addresses, or builds `publishers/{ns}/models/{name}` from the spec ([`providers_llmisvc.go:330-348`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_llmisvc.go#L330-L348)). | Small |
+| Decide which component owns canary weights. | `MaaSModelRef` has no weight, and two refs in one tenant with the same model ID are a conflict ([`model_identity_conflict.go:33-56`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/model_identity_conflict.go#L33-L56)). | Decision, then new |
+
+- MaaS has no Praxis control-plane code today. Nothing in the repository refers to `praxis.io`.
+- Grid in [`odh-model-controller`](https://github.com/opendatahub-io/odh-model-controller) needs the first change too: it stops publishing a provider when `status.router` is empty ([`grid_controller.go:759-768`](https://github.com/opendatahub-io/odh-model-controller/blob/a67a53c9d80915e428ac62c3dbab3e4b38961b00/internal/controller/serving/llm/grid_controller.go#L759-L768)).
+
+## Impact on users and the dashboard
+
+The goal is that users and the dashboard notice nothing. While the route and the routing in Praxis exist in parallel, nothing changes for them. The end state needs care, because the dashboard and MaaS both rely on fields that a service without a route would no longer have. Keeping those fields, and letting KServe skip the route for a Gateway that opts in, avoids that.
+
+| What users and the dashboard touch | Today | Risk in the end state | How it stays unchanged |
+|---|---|---|---|
+| `spec.router.route` and `spec.router.gateway.refs` on the service | The dashboard writes `router: {route: {}, gateway: {}}` on every new service and adds `maas-default-gateway` when the user selects MaaS. It decides whether a service is published to MaaS from that reference. | If the reference is removed, the next edit and save in the dashboard deletes the `MaaSModelRef`. | Keep both fields. KServe skips the managed route for a Gateway that opts in. |
+| `spec.tenantRef` on `MaaSModelRef` | The dashboard never sets it, and the MaaS documentation says to omit it. MaaS looks the tenant up from the route's parent Gateway. | Making the field required breaks what the dashboard creates. | MaaS resolves the tenant from the service's `gateway.refs`. |
+| Endpoint URL and hostname | Taken from route hostnames, Gateway listeners or the service status. | The hostname changes if Praxis is exposed without the tenant Gateway. | The tenant Gateway stays as the ingress in front of Praxis, and KServe keeps the Gateway host in `status.url` and `status.addresses`. |
+| Model ID in `/v1/models` | `status.resolvedModelAlias` of the `MaaSModelRef`. | A changed ID breaks clients. | The routing key equals the alias. |
+| `MaaSSubscription` and `MaaSAuthPolicy` | Written by admins, and turned into Kuadrant policies. | None in the spec. | No change. MaaS generates the Praxis `Policy` from the same objects. |
+| `AITenant.spec.gateway` | Names the tenant Gateway. | None while the Gateway stays. | No change. |
+
+### What cannot be hidden
+
+- Per-model path URLs of the form `/&lt;namespace&gt;/&lt;name&gt;/v1/...` stop working unless Praxis serves paths. Setting `serving.kserve.io/model-based-routing-only` on a Gateway has the same effect for clients today, so it can be used to find affected clients first.
+- The Kuadrant objects disappear, together with the documented `kubectl get authpolicy` and `tokenratelimitpolicy` checks and the status fields that list those objects.
+- The `HTTPRoute` column of `MaaSModelRef` is empty, and two steps disappear from the progress list in the dashboard.
+- AFAICT rate limit counters restart at the cut-over.
+
+## Migration
+
+A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in [Praxis migration](https://bartoszmajsak.github.io/kserve-praxis-integration/migration.html), which is a work in progress.
+
+## Not verified
+
+The decision is based on reading code, issues and the proposal. The following was not verified.
+
+- Nothing was run on a cluster. How services with no route behave is read from code. Two KServe unit tests covering the readiness path were run and pass.
+- That routing can stay MaaS-defined is taken from a remark in the proposal. What an inline filter chain in a `Proxy` can express was read from the types, and nothing renders it yet.
+- The pod roll on a routing change is read from the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82) at [`aa8180f`](https://github.com/praxis-proxy/gateway-controller/commit/aa8180fdf5734289cfdfcfd6efcd6a744e41b485). It was not run, and the draft can change before it merges.
+- The dashboard was read on `main` at [`16366ea`](https://github.com/opendatahub-io/odh-dashboard/tree/16366ea36ccdeb8f4417c9154e724682dd45b73b). Its release branches were not read, and nothing was exercised in a browser.
+- The MaaS change list comes from a single read of the code. We rechecked the rows about the route, the rate limit policy, `maas-api`, the `InferenceObjective` and the tenant Gateway, and took the rest from the note.
+</pre>
+</div>
+
+<script>
+  (function () {
+    var control = document.querySelector(".view");
+    if (!control) return;
+    var page = document.querySelector(".page");
+    var view = document.querySelector(".md-view");
+    var source = view.querySelector(".md-source");
+    var status = view.querySelector(".md-status");
+    function show(name) {
+      var markdown = name === "markdown";
+      page.hidden = markdown;
+      view.hidden = !markdown;
+      control.querySelectorAll("input").forEach(function (input) { input.checked = input.value === name; });
+      try { history.replaceState(null, "", markdown ? "#markdown" : location.pathname + location.search); } catch (e) {}
+    }
+    control.querySelectorAll("input").forEach(function (input) {
+      input.addEventListener("change", function () { show(input.value); });
+    });
+    view.querySelector(".md-copy").addEventListener("click", function () {
+      function done(ok) { status.textContent = ok ? "Copied" : "Select the text and copy it"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(source.textContent).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+      var range = document.createRange();
+      range.selectNodeContents(source);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      done(ok);
+    });
+    control.hidden = false;
+    show(location.hash === "#markdown" ? "markdown" : "page");
+  })();
+</script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>
