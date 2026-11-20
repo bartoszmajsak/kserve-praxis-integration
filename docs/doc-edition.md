@@ -159,10 +159,6 @@ Delivering the decision depends on work in Praxis that is not ours. The cut-over
 ## Open Questions
 
 - **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today. The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
-- **How services that are not published through MaaS are served.** They have no routing entry in this decision.
-- **Where in the status KServe publishes the request paths that go through the EPP.** The fields are not designed.
-- **Where `maas-api` is served.** Today it has its own HTTPRoute on the tenant Gateway.
-- **Whether the gateway-level Kuadrant policies are removed at the cut-over of a tenant or after it.** They apply to the forwarding route as well.
 
 ## Alternatives
 
