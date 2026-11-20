@@ -24,7 +24,7 @@
   <div>
     <span class="q">Open</span>
     <span class="a">Which component writes the routing</span>
-    <p>The decision covers KServe models. For external models the documents we read name three different writers. We recommend MaaS.</p>
+    <p>The decision covers KServe models. For external models the documents name three different writers. MaaS is the recommended one.</p>
   </div>
 </div>
 
@@ -173,7 +173,7 @@
 <section>
   <div class="prose">
     <h2>Recommended control plane</h2>
-    <p>We recommend that the component that writes the rest of the <code>Proxy</code> of a tenant also writes the routing and the upstream clusters of its external models. Under the decision that is MaaS. AGC keeps resolving the providers and publishes the result in the status of the <code>ExternalModel</code>, which MaaS reads. This is a recommendation and has not been agreed.</p>
+    <p>The recommended arrangement keeps a single writer for the <code>Proxy</code> of a tenant. MaaS writes the routing and the upstream clusters of external models, as it does for KServe models. AGC continues to resolve the providers and publishes the result in the status of the <code>ExternalModel</code>, which MaaS reads. The arrangement is a recommendation and has not been agreed.</p>
   </div>
 
   <figure>
@@ -216,7 +216,7 @@
     <h2>Open points</h2>
     <p>The decision for KServe models has MaaS write the routing into the <code>Proxy</code> of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.</p>
     <ul>
-      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers. We recommend MaaS, as described above.</li>
+      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers. MaaS is the recommended writer, as described above.</li>
       <li><strong>What MaaS reads for an external model without the HTTPRoute.</strong> The status of the <code>MaaSModelRef</code> and the targets of the policies come from that route today.</li>
       <li><strong>How the credential reaches the proxy.</strong> Today the kubelet projects the Secret as a file into the <code>ext_proc</code> pod. The <code>Proxy</code> type offers Secret keys as environment variables only (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43" target="_blank" rel="noopener"><code>proxy_types.go:41-43</code></a>).</li>
       <li><strong>How a private CA is trusted.</strong> An <code>ExternalProvider</code> defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69" target="_blank" rel="noopener"><code>externalprovider_types.go:65-69</code></a>). Praxis needs the CA as a file in its own pod.</li>
