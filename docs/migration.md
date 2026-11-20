@@ -41,7 +41,7 @@ The path of a client request in each stage. In stages 1 and 2 the per-model HTTP
 Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in [Praxis decision](decision.md).
 
 - MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from `gateway.refs`, and writes the `InferenceObjective` without checking the route.
-- KServe lets a service with a scheduler and no route become `Ready`, and publishes the pool, the port and the served model names for it.
+- KServe lets a service with a scheduler and no route become `Ready`, and publishes the pool, the port, the served model names and the request paths that go through the EPP for it.
 - KServe adds the switch that skips the HTTPRoute for a Gateway that opts in. It has a precedent in [`serving.kserve.io/model-based-routing-only`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83), which is read from the parent Gateway as well.
 - Stage 1 has to be complete before stage 3. On today's MaaS code, removing the route sets the `MaaSModelRef` to `Pending`, deletes the per-model rate limit policy, and leaves MaaS unable to find the tenant of the model.
 
