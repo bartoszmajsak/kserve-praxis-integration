@@ -9,7 +9,7 @@
 | Supersedes | N/A |
 | Superseded by: | N/A |
 | Tickets | |
-| Other docs: | [KServe and Praxis integration](https://bartoszmajsak.github.io/kserve-praxis-integration/) |
+| Other docs: | [KServe, MaaS and Praxis integration](https://bartoszmajsak.github.io/kserve-praxis-integration/) |
 
 ## What
 
@@ -40,7 +40,7 @@ Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writ
 - KServe still creates the EPP, the pool, the Service and the pods. Scheduling stays with the EPP.
 - Nothing writes status back to the `LLMInferenceService`. KServe readiness reads route and pool status today, so that has to change.
 
-### Problems in today's integration
+### Shortcomings in today's integration
 
 Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Routing MaaS-published KServe models through Praxis - KServe and Praxis integration</title>
+<title>Routing MaaS-published KServe models through Praxis - KServe, MaaS and Praxis integration</title>
 <meta name="description" content="The decision in the format of an Open Data Hub architecture decision record, for pasting into a doc. It leaves out the code references, the state of Praxis and the migration.">
 <script>
   (function () {
@@ -248,7 +248,7 @@
         <tr><td>Supersedes</td><td>N/A</td></tr>
         <tr><td>Superseded by:</td><td>N/A</td></tr>
         <tr><td>Tickets</td><td></td></tr>
-        <tr><td>Other docs:</td><td><a href="https://bartoszmajsak.github.io/kserve-praxis-integration/">KServe and Praxis integration</a></td></tr>
+        <tr><td>Other docs:</td><td><a href="https://bartoszmajsak.github.io/kserve-praxis-integration/">KServe, MaaS and Praxis integration</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -430,7 +430,7 @@
     </div>
   </figure>
   <div class="prose">
-    <h3>Problems in today's integration</h3>
+    <h3>Shortcomings in today's integration</h3>
     <p>Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.</p>
   </div>
   <div class="tbl">
@@ -840,7 +840,7 @@
 | Supersedes | N/A |
 | Superseded by: | N/A |
 | Tickets | |
-| Other docs: | [KServe and Praxis integration](https://bartoszmajsak.github.io/kserve-praxis-integration/) |
+| Other docs: | [KServe, MaaS and Praxis integration](https://bartoszmajsak.github.io/kserve-praxis-integration/) |
 
 ## What
 
@@ -871,7 +871,7 @@ Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writ
 - KServe still creates the EPP, the pool, the Service and the pods. Scheduling stays with the EPP.
 - Nothing writes status back to the `LLMInferenceService`. KServe readiness reads route and pool status today, so that has to change.
 
-### Problems in today's integration
+### Shortcomings in today's integration
 
 Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KServe and Praxis integration</title>
-<meta name="description" content="How a KServe LLMInferenceService is served when the data plane moves from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context.">
+<title>KServe, MaaS and Praxis integration</title>
+<meta name="description" content="How a KServe LLMInferenceService that is published through MaaS is served when the data plane moves from Gateway API on Istio to Praxis: the decision, the alternatives and the context.">
 <script>
   (function () {
     try {
@@ -176,14 +176,14 @@
 <div class="page">
 
 <header class="prose">
-  <h1>KServe and Praxis integration</h1>
-  <p class="lede">How a KServe <code>LLMInferenceService</code> is served when the data plane moves from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context.</p>
+  <h1>KServe, MaaS and Praxis integration</h1>
+  <p class="lede">How a KServe <code>LLMInferenceService</code> that is published through MaaS is served when the data plane moves from Gateway API on Istio to Praxis: the decision, the alternatives and the context.</p>
 </header>
 
 <section class="pages">
   <div class="prose">
     <h2><a href="decision.html">Decision</a></h2>
-    <p>The preferred option: <code>MaaSModelRef</code> stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's <code>Proxy</code>. What it gains, what it costs and what changes in KServe and MaaS.</p>
+    <p>The decision: <code>MaaSModelRef</code> stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's <code>Proxy</code>. What it gains, what it costs and what changes in KServe and MaaS.</p>
   </div>
   <div class="prose">
     <h2><a href="alternatives.html">Alternatives</a></h2>

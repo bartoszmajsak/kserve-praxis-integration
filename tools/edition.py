@@ -31,7 +31,7 @@ HEADER = (
     ("Supersedes", "N/A"),
     ("Superseded by:", "N/A"),
     ("Tickets", ""),
-    ("Other docs:", f'<a href="{SITE}">KServe and Praxis integration</a>'),
+    ("Other docs:", f'<a href="{SITE}">KServe, MaaS and Praxis integration</a>'),
 )
 
 # Group and how it is impacted. Key contacts and dates are filled in by hand.
@@ -119,14 +119,15 @@ def chapter(*parts):
 def compose(bodies):
     """The body of the edition from the bodies of the pages, as {page name: body}."""
     context, decision, alternatives = bodies["context"], bodies["decision"], bodies["alternatives"]
+    require(f"<h1>{TITLE}</h1>" in decision, f"{NAME}: the decision page and the doc edition have different titles")
     lede = lambda body, page: find(r'<p class="lede">(.*?)</p>', body, f"lede on the {page} page")
 
     request = section(context, "Praxis in the request path")
-    problems = section(context, "Problems in today's integration")
+    problems = section(context, "Shortcomings in today's integration")
     why = chapter(
         prose("<h2>Why</h2>", f"<p>{lede(context, 'context')}</p>", f"<p>{find(LEAD, request, 'request path lead')}</p>"),
         find(r"\n(  <figure>.*?</figure>)", request, "request path figure"),
-        prose("<h3>Problems in today's integration</h3>", f"<p>{find(LEAD, problems, 'problems lead')}</p>"),
+        prose("<h3>Shortcomings in today's integration</h3>", f"<p>{find(LEAD, problems, 'problems lead')}</p>"),
         find(r'\n(  <div class="tbl">.*?</div>)', problems, "problems table"),
     )
 

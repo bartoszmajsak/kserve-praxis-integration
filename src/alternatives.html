@@ -20,7 +20,7 @@
     <li><span class="stroke rail"></span><span>A tile indented under another is owned by it through an <code>ownerReference</code>.</span></li>
     <li><span class="stroke"></span><span>A solid arrow is a reference held in a field. It points from the object that holds the field.</span></li>
     <li><span class="stroke dash"></span><span>A dashed arrow is an action of a controller with no reference between the two objects.</span></li>
-    <li><span class="stroke warn"></span><span>Red marks a relationship that is listed under the figure as a problem.</span></li>
+    <li><span class="stroke warn"></span><span>Red marks a relationship that is listed under the figure as a shortcoming.</span></li>
   </ul>
 </section>
 
@@ -45,7 +45,7 @@
         </ul>
       </div>
       <div>
-        <h3>Relationships that cause problems</h3>
+        <h3>Shortcomings in these relationships</h3>
         <ul>
           <li>A MaaS policy is owned by a KServe object. Deleting the HTTPRoute deletes the per-model rate limit.</li>
           <li>MaaS depends on the HTTPRoute, which is an implementation detail of KServe, and not on the <code>LLMInferenceService</code> status.</li>

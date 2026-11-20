@@ -12,7 +12,7 @@ The figures use the same three columns, one per namespace, and the same marks.
 - A tile indented under another is owned by it through an `ownerReference`.
 - A solid arrow is a reference held in a field. It points from the object that holds the field.
 - A dashed arrow is an action of a controller with no reference between the two objects.
-- Red marks a relationship that is listed under the figure as a problem.
+- Red marks a relationship that is listed under the figure as a shortcoming.
 
 ## Today: Gateway API with Kuadrant
 
@@ -29,7 +29,7 @@ The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRou
 - AGC deploys `praxis-extproc` and its `EnvoyFilter` for the Gateway named in `AITenant.status.gatewayRef`.
 - Istio implements the Gateway and writes route and pool status. Kuadrant enforces the `AuthPolicy` and the rate limit policies.
 
-### Relationships that cause problems
+### Shortcomings in these relationships
 
 - A MaaS policy is owned by a KServe object. Deleting the HTTPRoute deletes the per-model rate limit.
 - MaaS depends on the HTTPRoute, which is an implementation detail of KServe, and not on the `LLMInferenceService` status.

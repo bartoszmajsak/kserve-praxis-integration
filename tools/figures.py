@@ -7,7 +7,7 @@ places the figure with `<!-- figure: NAME -->`, and the standalone files are
 Encoding of the relationship maps: a tile's colour and header label name who writes the
 object, a tile indented under another is owned by it (ownerReference), a solid edge is a
 reference held in a field, a dashed edge is a controller acting without a reference, and
-red marks a relationship listed as a problem.
+red marks a relationship listed as a shortcoming.
 """
 from typing import Callable, NamedTuple
 
@@ -234,7 +234,7 @@ def relationships_today():
         ("rail", "", "owned through an ownerReference"),
         ("line", "", "reference held in a field"),
         ("dash", "", "controller action, no reference"),
-        ("line", "warn", "red: listed as a problem"),
+        ("line", "warn", "red: listed as a shortcoming"),
         ("group", "", "namespace"),
     ])
     return f
@@ -296,7 +296,7 @@ def relationships_option_1():
         ("rail", "", "owned through an ownerReference"),
         ("line", "", "reference held in a field"),
         ("dash", "", "controller action, no reference"),
-        ("line", "warn", "red: listed as a problem"),
+        ("line", "warn", "red: listed as a shortcoming"),
         ("group", "", "namespace"),
     ])
     return f
@@ -350,7 +350,7 @@ def relationships_option_2():
         ("rail", "", "owned through an ownerReference"),
         ("line", "", "reference held in a field"),
         ("dash", "", "controller action, no reference"),
-        ("line", "warn", "red: listed as a problem"),
+        ("line", "warn", "red: listed as a shortcoming"),
         ("group", "", "namespace"),
     ])
     return f

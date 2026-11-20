@@ -1,18 +1,18 @@
-# MaaSModelRef only, ModelProvider later
+# Routing MaaS-published KServe models through Praxis
 
-Decision record, Praxis data plane.
+Decision record, MaaSModelRef only, ModelProvider later.
 
 The data plane moves from Gateway API on Istio to Praxis. The decision covers how a KServe `LLMInferenceService` that is published through MaaS is served in that setup: what KServe publishes about the service, which component writes its routing in Praxis, and what users write. KServe publishes the backend in the `LLMInferenceService` status, MaaS writes the routing into the `Proxy` of the tenant, and `MaaSModelRef` stays the object users write. The `ModelProvider` API can be adopted later.
 
 | Topic | Summary | Detail |
 |---|---|---|
-| Status | Preferred option | It was discussed as option 3. Options 1 and 2 are described in [Alternatives](alternatives.md). |
+| Status | Approved | The preferred option was discussed as option 3. Options 1 and 2 are described in [Alternatives](alternatives.md). |
 | Decision | MaaS writes the routing into the tenant's Proxy | KServe publishes the backend, the port, the model names and `Ready` in the service status, and MaaS reads it for each `MaaSModelRef`. No `ModelProvider` is created. |
 | Next step | ModelProvider when its API is defined | MaaS then creates one provider per `MaaSModelRef`. Users and KServe change nothing. |
 
 ## Context
 
-Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the `ModelProvider`, and its API is still open ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). The request path, the problems the move exposes and the state of Praxis are described in [Context](context.md).
+Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the `ModelProvider`, and its API is still open ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). The request path, the shortcomings the move exposes and the state of Praxis are described in [Context](context.md).
 
 ## Goals and non-goals
 

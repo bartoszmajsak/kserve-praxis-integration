@@ -37,10 +37,10 @@ GENERATED = ("docs", "site", "build/artifact")
 KEPT = "docs/figs/png/"  # rendered by tools/png.py
 STYLE = "src/style.css"
 
-SITE_TITLE = "KServe and Praxis integration"
+SITE_TITLE = "KServe, MaaS and Praxis integration"
 SITE_LEDE = (
-    "How a KServe `LLMInferenceService` is served when the data plane moves "
-    "from Gateway API on Istio to Praxis: the preferred option, the alternatives and the context."
+    "How a KServe `LLMInferenceService` that is published through MaaS is served when the data plane moves "
+    "from Gateway API on Istio to Praxis: the decision, the alternatives and the context."
 )
 
 
@@ -53,7 +53,7 @@ class Page(NamedTuple):
 PAGES = (
     Page(
         "decision",
-        "The preferred option: `MaaSModelRef` stays the object users write, KServe publishes the backend in "
+        "The decision: `MaaSModelRef` stays the object users write, KServe publishes the backend in "
         "status, and MaaS writes the routing into the tenant's `Proxy`. What it gains, what it costs and "
         "what changes in KServe and MaaS.",
     ),
