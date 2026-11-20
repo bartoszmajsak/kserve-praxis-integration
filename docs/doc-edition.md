@@ -66,7 +66,6 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 ## Non-Goals
 
 - The move to Praxis itself. It is the starting point and is not decided here.
-- Praxis routing for services that are not published through MaaS. They stay on Gateway API with Kuadrant.
 - Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
 - Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
 - Canary and weighted routing between services in the first step. The owner of the weights is still open.
@@ -197,7 +196,7 @@ The table lists the relationships that change between the current setup, the two
 - Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
 - All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
 - The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
-- A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
+- A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
 
