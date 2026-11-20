@@ -725,7 +725,7 @@
     <h2>Open Questions</h2>
     <ul>
       <li><strong>How KServe recognises a Gateway that is in front of a Praxis proxy.</strong> KServe already fetches the Gateway and its <code>GatewayClass</code> for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The <code>GatewayClass</code> identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust <code>operator</code>, named <code>praxis</code> with the controller <code>praxis.sh/gateway-controller</code>, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads <code>serving.kserve.io/model-based-routing-only</code> from it today. The integration proposal in <code>gateway-controller</code> names neither and leaves the question open (<a href="https://github.com/praxis-proxy/gateway-controller/pull/26" target="_blank" rel="noopener">PR #26</a>).</li>
-      <li><strong>Transport security between the proxy and the EPP.</strong> KServe enables TLS on the EPP through a cluster-wide setting. At the time of writing, the EPP client in Praxis exposes no TLS configuration, and its gRPC dependency is built without TLS support. The options are to add TLS support to the client or to run the EPP without TLS for traffic from Praxis, and the choice has not been made.</li>
+      <li><strong>Transport security between the proxy and the EPP.</strong> KServe enables TLS on the EPP through a cluster-wide setting. At the time of writing, the EPP client in Praxis exposes no TLS configuration. The options are to add TLS support to the client or to run the EPP without TLS for traffic from Praxis, and the choice has not been made.</li>
     </ul>
   </div>
 </section>
@@ -1006,7 +1006,7 @@ Delivering the decision depends on work in Praxis that is not ours. The cut-over
 ## Open Questions
 
 - **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today. The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
-- **Transport security between the proxy and the EPP.** KServe enables TLS on the EPP through a cluster-wide setting. At the time of writing, the EPP client in Praxis exposes no TLS configuration, and its gRPC dependency is built without TLS support. The options are to add TLS support to the client or to run the EPP without TLS for traffic from Praxis, and the choice has not been made.
+- **Transport security between the proxy and the EPP.** KServe enables TLS on the EPP through a cluster-wide setting. At the time of writing, the EPP client in Praxis exposes no TLS configuration. The options are to add TLS support to the client or to run the EPP without TLS for traffic from Praxis, and the choice has not been made.
 
 ## Alternatives
 
