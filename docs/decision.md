@@ -16,7 +16,7 @@ Praxis routes on the model name in the request body, and no per-model HTTPRoute 
 
 ## Goals and non-goals
 
-We took the goals from what users, clients and the two controllers must not lose in the move. The non-goals are left out on purpose, to keep the first step small.
+We keep the scope small on purpose, given the timelines. The non-goals list what is left out of this step.
 
 ### Goals
 
