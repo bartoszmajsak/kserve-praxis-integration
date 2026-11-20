@@ -24,7 +24,7 @@ The path of a client request in each stage. In stages 1 and 2 the per-model HTTP
 ### Who does what, and why
 
 - The user changes nothing. The `LLMInferenceService` keeps `spec.router.route` and `gateway.refs`, and the `MaaSModelRef` stays as it is.
-- KServe publishes the backend, the port, the served model names and `Ready` in status with or without a route in stage 1. In stage 3 it stops rendering the HTTPRoute for a Gateway that opts in.
+- KServe publishes the backend, the port, the served model names and `Ready` in status with or without a route in stage 1. In stage 3 it stops rendering the HTTPRoute for a Gateway that is in front of a Praxis proxy.
 - MaaS reads the service status in place of the route in stage 1. In stage 2 it creates the `Proxy` of the tenant with a routing entry per `MaaSModelRef`, the `Policy`, and the forwarding route on the tenant Gateway. The forwarding route has no owner today, and MaaS already manages the other objects of the tenant.
 - `gateway-controller` renders and deploys the proxy from the objects MaaS creates.
 - The platform admin marks the tenant Gateway to start stage 3, and removes the mark to roll it back.
@@ -42,7 +42,7 @@ Stage 1 is the largest part of the work on our side, and it does not depend on P
 
 - MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from `gateway.refs`, and writes the `InferenceObjective` without checking the route.
 - KServe lets a service with a scheduler and no route become `Ready`, and publishes the pool, the port, the served model names and the request paths that go through the EPP for it.
-- KServe adds the switch that skips the HTTPRoute for a Gateway that opts in. It has a precedent in [`serving.kserve.io/model-based-routing-only`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83), which is read from the parent Gateway as well.
+- KServe skips the HTTPRoute for a Gateway that is in front of a Praxis proxy. Which property of the Gateway shows that is to be confirmed. Reading a property of the parent Gateway has a precedent in [`serving.kserve.io/model-based-routing-only`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83), which is read from the parent Gateway as well.
 - Stage 1 has to be complete before stage 3. On today's MaaS code, removing the route sets the `MaaSModelRef` to `Pending`, deletes the per-model rate limit policy, and leaves MaaS unable to find the tenant of the model.
 
 ## What the cut-over waits for

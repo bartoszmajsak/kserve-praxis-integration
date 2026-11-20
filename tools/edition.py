@@ -37,7 +37,7 @@ HEADER = (
 # Group and how it is impacted. Key contacts and dates are filled in by hand.
 STAKEHOLDERS = (
     ("Model Serving (KServe)",
-     "Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that opts in."),
+     "Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that is in front of a Praxis proxy."),
     ("Models-as-a-Service (MaaS)",
      "Reads the service status in place of the HTTPRoute, writes the routing into the <code>Proxy</code> of the tenant and generates the Praxis <code>Policy</code>. It has the larger share of the work."),
     ("AI Gateway (Praxis)",

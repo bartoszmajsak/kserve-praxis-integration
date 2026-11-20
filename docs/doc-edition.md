@@ -52,7 +52,7 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 | Tenant identity is bound to a Gateway. | An `AITenant` fails without a Gateway, and a model's tenant is looked up from its route's parent Gateway. The proposal allows an ingress with no Gateway API. | Keep the Gateway as the tenant's entry point, resolve the tenant from the service's `gateway.refs`, and point an `AITenant` at a `Proxy`. An ingress without Gateway API would need `spec.tenantRef`. |
 | The model ID is only published on gateway addresses. | The ID clients send is a contract. MaaS takes it from `status.addresses[].models`, which KServe fills from gateway URLs only. Without a route MaaS rebuilds it from the spec, and AFAICT that misses a name set through a `baseRef` and LoRA adapter names. | KServe publishes served model names without a route. MaaS uses them as the routing key. |
 | Which requests go through the EPP is only defined in the HTTPRoute. | KServe's route preset sends seven inference endpoints to the `InferencePool`, which means through the EPP, and every other path, such as `/v1/models`, directly to the workload Service. The service status names the pool, the EPP and the Service, and not which request paths belong to which. The preset is configuration and a service can carry its own route spec, so the list cannot be copied into MaaS. | KServe publishes in status which request paths go through the EPP and which go to the Service directly. MaaS writes the routing from it. |
-| Canary weights only exist on a route. | `group` and `weight` are fields of `spec.router.route`, and their status needs a route. `MaaSModelRef` has no weight. A service without a route cannot take part in a canary. | Either KServe allows `group` and `weight` without a route, or MaaS holds the weights. |
+| Canary weights only exist on a route. | `group` and `weight` are fields of `spec.router.route`, and their status needs a route. `MaaSModelRef` has no weight. A service without a route cannot take part in a canary. | `group` and `weight` stay in `spec.router.route`. KServe publishes them in status when the HTTPRoute is not created, and MaaS reads them from there. |
 
 ## Goals
 
@@ -69,7 +69,7 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 - Services that are not published through MaaS. How they are served is open and is not decided here.
 - Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
 - Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
-- Canary and weighted routing between services in the first step. The owner of the weights is still open.
+- Weighted routing between services in the first step. The weights stay on the service and KServe publishes them in status, so they are available when Praxis routes by weight.
 - An ingress without Gateway API. The tenant Gateway stays in front of the proxy.
 - Per-model path URLs of the form `/<namespace>/<name>/v1/...` through Praxis.
 - Moving a single model. The unit of the cut-over is the tenant.
@@ -91,6 +91,13 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 - MaaS reads that status and writes the routing of every published model of a tenant into the tenant's `Proxy`, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined". MaaS creates the `Policy` from the subscriptions and the auth policies.
 - `gateway-controller` renders the `Proxy` and the `Policy`. It does not need the `ModelProvider` type, which is not implemented yet ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)).
 
+### The service spec and the Gateway
+
+- `spec.router.route` stays in the service spec, with `group` and `weight` when a canary needs them. KServe publishes them in status, and it does not create the HTTPRoute for a service that is served through Praxis.
+- `spec.router.gateway.refs` stays in use. MaaS resolves the tenant from it, and KServe finds the Gateway of the service through it.
+- KServe recognises a Praxis-based deployment from the Gateway the service references. It already fetches the Gateway and its `GatewayClass` for every parent of a route. Which property of the Gateway carries the signal has to be confirmed before this is built.
+- The `GatewayClass` is a candidate for that signal only if the Gateway in front of the proxy has a class of its own. A Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`. A Gateway from another provider carries the class of that provider. The integration proposal in `gateway-controller` does not name a class and leaves open how KServe recognises Praxis ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+
 ### Benefits
 
 - **One contract between MaaS and KServe**: the `LLMInferenceService` status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.
@@ -111,8 +118,8 @@ KServe creates no new objects. It has to publish complete status for a service w
 | Publish which request paths go through the EPP and which go to the workload Service directly. | The split exists only in the route preset. Thirteen of its sixteen rules send seven inference endpoints, such as `/v1/chat/completions`, to the `InferencePool`, and [three catch-all rules](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/config/llmisvcconfig/config-llm-router-route.yaml#L439-L495) send every other path, such as `/v1/models`, to the workload Service. The status names the pool, the EPP and the Service, and no paths. | Medium, API change |
 | Publish served model names on the address of a service with no route. | `status.addresses[].models` is filled from gateway URLs only. | Small |
 | Add the port to that address, and clear `status.url` when the route is removed. | The address is the workload Service host with no port, and the Service listens on 8000. `status.url` is only written when there is a route, so AFAICT it keeps its old value once the route is removed. | Small |
-| Skip the managed HTTPRoute for a Gateway that opts in, and treat the service as one with no route. | The route is always rendered when `spec.router.route` is set. A switch per Gateway has a precedent: `serving.kserve.io/model-based-routing-only` is read from the parent Gateway. | Small to medium |
-| Optional: allow `group` and `weight` without a route. | They are fields of `spec.router.route`, released in v0.20.0. Validation, defaults, labels and group status all assume a route. The alternative with no KServe change is weights held by MaaS. | Medium to large |
+| Skip the managed HTTPRoute for a Gateway that is in front of a Praxis proxy, and treat the service as one with no route. | The route is always rendered when `spec.router.route` is set. Which property of the Gateway shows that is to be confirmed. Reading a property of the parent Gateway has a precedent: `serving.kserve.io/model-based-routing-only` is read from the parent Gateway. | Small to medium |
+| Publish `group` and `weight` in status when the HTTPRoute is not created. | They are fields of `spec.router.route`, which stays in the spec. The group status assumes a route, and `status.router` is cleared without one. | Medium |
 | No change for the workload Service. | It is already in `status.workloads.service`, and a service with no scheduler and no route is already `Ready`. | None |
 
 - Open PR [`kserve/kserve#5972`](https://github.com/kserve/kserve/pull/5972) covers a service with `gateway.refs` and no route (issue [`#5986`](https://github.com/kserve/kserve/issues/5986)). A service with no route and no refs is not covered.
@@ -137,7 +144,7 @@ MaaS has the larger share of the work. It derives nearly all model information f
 | Write a routing entry for each `MaaSModelRef` into the tenant's `Proxy`, and remove it when the service stops or is deleted. | MaaS already does the same for an `InferenceObjective` per pool. It needs RBAC and a watch for the Praxis types. | Medium |
 | Write two kinds of entries for a model with a scheduler: the inference endpoints through the EPP, and every other path to the workload Service. | MaaS has no code for this, because the HTTPRoute carries the split today. The paths have to come from the service status, and not from a list in MaaS. | New |
 | Use the current model ID as the routing key. | `ResolveModelAlias` takes it from the service's status addresses, or builds `publishers/{ns}/models/{name}` from the spec. | Small |
-| Decide which component owns canary weights. | `MaaSModelRef` has no weight, and two refs in one tenant with the same model ID are a conflict. | Decision, then new |
+| Read canary weights from the service status. | `MaaSModelRef` has no weight, and two refs in one tenant with the same model ID are a conflict. | New, when Praxis routes by weight |
 
 - MaaS has no Praxis control-plane code today. Nothing in the repository refers to `praxis.io`.
 - Grid in [`odh-model-controller`](https://github.com/opendatahub-io/odh-model-controller) needs the first change too: it stops publishing a provider when `status.router` is empty.
@@ -206,13 +213,13 @@ The table lists the relationships that change between the current setup, the two
 - The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
 - A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
-- Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+- Canary weights stay on the service, in `spec.router.route`, and MaaS reads them from the service status. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
 
 ## Stakeholder Impacts
 
 | Group | Key Contacts | Date | Impacted? |
 |---|---|---|---|
-| Model Serving (KServe) | | | Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that opts in. |
+| Model Serving (KServe) | | | Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that is in front of a Praxis proxy. |
 | Models-as-a-Service (MaaS) | | | Reads the service status in place of the HTTPRoute, writes the routing into the `Proxy` of the tenant and generates the Praxis `Policy`. It has the larger share of the work. |
 | AI Gateway (Praxis) | | | `gateway-controller` renders and deploys the proxy from the `Proxy` and the `Policy`. The EPP client and the policy engine have open work. |
 | Dashboard | | | No change while the service spec keeps `route` and `gateway.refs`. The `HTTPRoute` column and two progress steps disappear. |
