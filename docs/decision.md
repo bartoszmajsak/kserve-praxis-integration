@@ -36,7 +36,6 @@ We took the goals from what users, clients and the two controllers must not lose
 - An ingress without Gateway API. The tenant Gateway stays in front of the proxy.
 - Per-model path URLs of the form `/<namespace>/<name>/v1/...` through Praxis.
 - Moving a single model. The unit of the cut-over is the tenant.
-- Closing the gaps in Praxis itself: proxy deployment, the EPP client and the policy engine. We depend on them and track them.
 
 ## Decision
 
@@ -74,6 +73,14 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 - A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+
+## Dependencies
+
+Delivering the decision depends on work in Praxis that is not ours. The cut-over of a tenant waits for it. The dates and the stages are in [Migration](migration.md).
+
+- `gateway-controller` renders and deploys the proxy from a `Proxy` and a `Policy`. This is tracked in [`gateway-controller#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17) and in the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82).
+- The EPP client of Praxis selects its target per model, supports TLS and sends response bodies to the EPP. Services with a scheduler need it. No issue is open for it, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed.
+- The policy engine supports Kubernetes token authentication and authorization ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213), [`policy#214`](https://github.com/praxis-proxy/policy/issues/214)), a token limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352), [`policy#308`](https://github.com/praxis-proxy/policy/issues/308)) and limit counters shared between replicas ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)).
 
 ## Security and privacy
 

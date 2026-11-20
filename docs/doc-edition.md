@@ -72,7 +72,6 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 - An ingress without Gateway API. The tenant Gateway stays in front of the proxy.
 - Per-model path URLs of the form `/<namespace>/<name>/v1/...` through Praxis.
 - Moving a single model. The unit of the cut-over is the tenant.
-- Closing the gaps in Praxis itself: proxy deployment, the EPP client and the policy engine. We depend on them and track them.
 
 ## How
 
@@ -141,6 +140,14 @@ MaaS has the larger share of the work. It derives nearly all model information f
 
 - MaaS has no Praxis control-plane code today. Nothing in the repository refers to `praxis.io`.
 - Grid in [`odh-model-controller`](https://github.com/opendatahub-io/odh-model-controller) needs the first change too: it stops publishing a provider when `status.router` is empty.
+
+### Dependencies
+
+Delivering the decision depends on work in Praxis that is not ours. The cut-over of a tenant waits for it. The dates and the stages are in [Migration](migration.md).
+
+- `gateway-controller` renders and deploys the proxy from a `Proxy` and a `Policy`. This is tracked in [`gateway-controller#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17) and in the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82).
+- The EPP client of Praxis selects its target per model, supports TLS and sends response bodies to the EPP. Services with a scheduler need it. No issue is open for it, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed.
+- The policy engine supports Kubernetes token authentication and authorization ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213), [`policy#214`](https://github.com/praxis-proxy/policy/issues/214)), a token limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352), [`policy#308`](https://github.com/praxis-proxy/policy/issues/308)) and limit counters shared between replicas ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)).
 
 ## Alternatives
 

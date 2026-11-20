@@ -140,6 +140,7 @@ def compose(bodies):
         inner(section(decision, "Benefits"), "Benefits", "<h3>Benefits</h3>"),
         inner(kserve, "Changes in upstream KServe", "<h3>Changes in upstream KServe</h3>"),
         inner(maas, "Changes in MaaS", "<h3>Changes in MaaS</h3>"),
+        inner(section(decision, "Dependencies"), "Dependencies", "<h3>Dependencies</h3>"),
     )
 
     option1 = section(alternatives, "Option 1: KServe creates the ModelProvider")
