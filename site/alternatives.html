@@ -442,7 +442,7 @@
 <section>
   <div class="prose">
     <h2>Option 1: KServe creates the ModelProvider</h2>
-    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it.</p>
+    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider.</p>
   </div>
   <figure>
     <div class="scroll">
@@ -868,7 +868,7 @@ The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRou
 
 ## Option 1: KServe creates the ModelProvider
 
-Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it.
+Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider.
 
 ![Custom resources in option 1, where KServe creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/relationships-option-1.png)
 

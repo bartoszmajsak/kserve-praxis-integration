@@ -6,7 +6,7 @@ How a KServe `LLMInferenceService` is served when the data plane moves from Gate
 - [Alternatives](docs/alternatives.md) describes the options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.
 - [Context](docs/context.md) covers how a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.
 - [Migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
-- [Doc edition](docs/doc-edition.md) is the decision as one document, for pasting into a doc. The build composes it from the pages. It leaves out the code references, the state of Praxis, the alternatives and the migration.
+- [Doc edition](docs/doc-edition.md) is the decision as one document, in the format of an Open Data Hub architecture decision record, for pasting into a doc. The build composes it from the pages. It leaves out the code references, the state of Praxis and the migration.
 
 ## Reading
 
@@ -40,7 +40,7 @@ tools/figures.py      the figures, one function each
 tools/figkit.py       drawing primitives for the figures
 tools/themes.py       light and dark colours of the standalone figures
 tools/html2md.py      HTML to Markdown converter
-tools/edition.py      composes the doc edition from sections of the pages
+tools/edition.py      composes the doc edition, an ADR, from sections of the pages
 tools/png.py          renders the PNG figures and checks that they are current
 tools/site_html.py    standalone HTML documents, navigation, theme switch and Markdown view
 tools/errors.py       the error a failed build check raises

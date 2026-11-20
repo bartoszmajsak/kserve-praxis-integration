@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Option 3: KServe - MaaS - Praxis integration - KServe and Praxis integration</title>
-<meta name="description" content="The decision as one document, for pasting into a doc: the problem, the proposal and the changes in KServe and MaaS. It leaves out the code references, the state of Praxis, the alternatives and the migration.">
+<title>ODH-ADR-MS-XXXX: Routing KServe models through Praxis - KServe and Praxis integration</title>
+<meta name="description" content="The decision in the format of an Open Data Hub architecture decision record, for pasting into a doc. It leaves out the code references, the state of Praxis and the migration.">
 <script>
   (function () {
     try {
@@ -234,29 +234,38 @@
 <div class="page">
 
 <header class="prose">
-  <h1>Option 3: KServe - MaaS - Praxis integration</h1>
-  <p class="lede">Moving the data plane from Gateway API on Istio to Praxis changes how a KServe <code>LLMInferenceService</code> receives traffic. The move exposes problems in the integration between MaaS and KServe. A status contract on the <code>LLMInferenceService</code>, with MaaS as the owner of the routing, can help in the overall migration process.</p>
+  <h1>ODH-ADR-MS-XXXX: Routing KServe models through Praxis</h1>
 </header>
 
-<div class="answers">
-  <div>
-    <span class="q">Problem</span>
-    <span class="a">MaaS and KServe integrate through the HTTPRoute</span>
-    <p>MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Date</td><td>2026-11-20</td></tr>
+        <tr><td>Scope</td><td>Model Serving (KServe), Models-as-a-Service (MaaS), AI Gateway</td></tr>
+        <tr><td>Status</td><td>Approved</td></tr>
+        <tr><td>Authors</td><td></td></tr>
+        <tr><td>Supersedes</td><td>N/A</td></tr>
+        <tr><td>Superseded by:</td><td>N/A</td></tr>
+        <tr><td>Tickets</td><td></td></tr>
+        <tr><td>Other docs:</td><td><a href="https://bartoszmajsak.github.io/kserve-praxis-integration/">KServe and Praxis integration</a></td></tr>
+      </tbody>
+    </table>
   </div>
-  <div>
-    <span class="q">Proposal</span>
-    <span class="a">A status contract, and MaaS writes the routing</span>
-    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, with or without a route. MaaS writes the routing into the tenant's <code>Proxy</code> from it.</p>
-  </div>
-</div>
 
 <section>
   <div class="prose">
-    <h2>Praxis in the request path</h2>
+    <h2>What</h2>
+    <p>Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps <code>MaaSModelRef</code> as the object users write. KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS writes the routing into the <code>Proxy</code> of the tenant. The <code>ModelProvider</code> API can be adopted later.</p>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Why</h2>
+    <p>Moving the data plane from Gateway API on Istio to Praxis changes how a KServe <code>LLMInferenceService</code> receives traffic. The move exposes problems in the integration between MaaS and KServe. A status contract on the <code>LLMInferenceService</code>, with MaaS as the owner of the routing, can help in the overall migration process.</p>
     <p><a href="https://github.com/praxis-proxy/gateway-controller" target="_blank" rel="noopener"><code>gateway-controller</code></a> is not an ingress controller (yet?). It configures a Praxis proxy that is deployed behind the platform's existing ingress. Currently, that ingress ("any GWAPI provider, or none") "just forwards to it". A Gateway can still be the entry point and forward all traffic to Praxis. <strong>The per-model HTTPRoute is removed</strong>. Praxis routes on the <code>model</code> field of the request body, and <a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311" target="_blank" rel="noopener">"no route is ever written"</a>.</p>
   </div>
-
   <figure>
     <div class="scroll">
       <svg viewBox="0 0 1040 572" role="img" aria-label="Request path today and with Praxis, as stacks of layers. Today the request goes through an Istio Gateway that stacks payload processing, Kuadrant, a per-model HTTPRoute and an ext_proc filter. In the target setup the platform ingress only forwards to a Praxis proxy that stacks a policy slot and a routing slot. The per-model routing decision moves from the HTTPRoute to the routing slot.">
@@ -420,13 +429,9 @@
       </div>
     </div>
   </figure>
-</section>
-
-<section>
   <div class="prose">
-    <h2>Problems in today's integration</h2>
+    <h3>Problems in today's integration</h3>
     <p>Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.</p>
-    <h3>Between MaaS and KServe</h3>
   </div>
   <div class="tbl">
     <table>
@@ -446,7 +451,37 @@
 
 <section>
   <div class="prose">
-    <h2>MaaSModelRef only, ModelProvider later</h2>
+    <h2>Goals</h2>
+    <ul>
+      <li>Models published through MaaS are served through Praxis without a per-model HTTPRoute.</li>
+      <li>Users and the dashboard keep writing the same objects. Clients keep the hostname, the request URL with the model in the body, and the model ID.</li>
+      <li>MaaS and KServe integrate through one contract, the <code>LLMInferenceService</code> status, and every object has one writer.</li>
+      <li>Upstream KServe needs no Praxis types and no tenant concept.</li>
+      <li>The first step does not wait for APIs that are still open in Praxis, and the <code>ModelProvider</code> can be adopted later without a user-facing change.</li>
+      <li>A tenant can move in stages and be rolled back, and the preparation can start before Praxis is ready.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Non-Goals</h2>
+    <ul>
+      <li>Praxis routing for services that are not published through MaaS. They stay on Gateway API with Kuadrant.</li>
+      <li>Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.</li>
+      <li>Replacing <code>MaaSModelRef</code> as the object users write, or defining the <code>ModelProvider</code> API.</li>
+      <li>Canary and weighted routing between services in the first step. The owner of the weights is still open.</li>
+      <li>An ingress without Gateway API. The tenant Gateway stays in front of the proxy.</li>
+      <li>Per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> through Praxis.</li>
+      <li>Moving a single model. The unit of the cut-over is the tenant.</li>
+      <li>Closing the gaps in Praxis itself: proxy deployment, the EPP client and the policy engine. We depend on them and track them.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>How</h2>
     <p>We propose to keep <code>MaaSModelRef</code> as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and <code>Ready</code>, with or without a route. MaaS reads that status and writes the routing of each published model into the <code>Proxy</code> of the tenant, next to the policy slot, and <code>gateway-controller</code> renders it. No <code>ModelProvider</code> is created.</p>
     <p>The status also has to say which request paths go through the EPP and which go to the workload Service directly. That split is only defined in the HTTPRoute today, and the routing MaaS writes needs both kinds of entries.</p>
   </div>
@@ -600,9 +635,6 @@
       </div>
     </div>
   </figure>
-</section>
-
-<section>
   <div class="prose">
     <h3>Benefits</h3>
     <ul>
@@ -615,26 +647,8 @@
       <li><strong>Adopting the <code>ModelProvider</code> later needs no change for users or for KServe.</strong> The contract with KServe and the user-facing objects stay the same.</li>
     </ul>
   </div>
-</section>
-
-<section>
   <div class="prose">
-    <h3>Costs and limits</h3>
-    <ul>
-      <li>In the current draft a routing change rolls the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy (<a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.</li>
-      <li>Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.</li>
-      <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
-      <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>.</li>
-      <li>A service without a <code>MaaSModelRef</code> has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.</li>
-      <li>When an <code>LLMInferenceService</code> is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.</li>
-      <li>Canary weights need an owner. They are either read from <code>group</code> and <code>weight</code> on the service, or defined in MaaS. We would not add a weight field to <code>MaaSModelRef</code>, because it would compete with the weight of a <code>ModelProvider</code> later.</li>
-    </ul>
-  </div>
-</section>
-
-<section>
-  <div class="prose">
-    <h2>Changes in upstream KServe</h2>
+    <h3>Changes in upstream KServe</h3>
     <p>KServe creates no new objects. It has to publish complete status for a service without a route: today such a service with a scheduler never becomes <code>Ready</code>, and its status does not include the pool. We read this from <a href="https://github.com/kserve/kserve" target="_blank" rel="noopener"><code>kserve/kserve</code></a> master at <a href="https://github.com/kserve/kserve/commit/cdbe9860583e36f29d46a58179d86299e8faa41d" target="_blank" rel="noopener"><code>cdbe986058</code></a>. The sizes are estimates from reading the code. None of it has been implemented.</p>
   </div>
   <div class="tbl">
@@ -659,11 +673,8 @@
       <li>ODH build: give strict NetworkPolicy a way to allow the proxy's namespace. Today it takes the allowed namespaces from Gateway references only.</li>
     </ul>
   </div>
-</section>
-
-<section>
   <div class="prose">
-    <h2>Changes in MaaS</h2>
+    <h3>Changes in MaaS</h3>
     <p>MaaS has the larger share of the work. It derives nearly all model information from the HTTPRoute today, so that dependency has to be removed first. Most rows are needed for any integration with Praxis, and only the last four follow from MaaS writing the routing. This comes from <a href="https://github.com/opendatahub-io/models-as-a-service" target="_blank" rel="noopener"><code>opendatahub-io/models-as-a-service</code></a> at <a href="https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be" target="_blank" rel="noopener"><code>e0afdbc</code></a>.</p>
   </div>
   <div class="tbl">
@@ -693,20 +704,142 @@
   </div>
 </section>
 
+<section>
+  <div class="prose">
+    <h2>Alternatives</h2>
+    <p>Two other ways to replace the per-model HTTPRoute were considered.</p>
+    <h3>Option 1: KServe creates the ModelProvider</h3>
+    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider. It is not preferred for these reasons.</p>
+    <ul>
+          <li>KServe writes into a namespace it does not manage. An <code>ownerReference</code> cannot cross namespaces, so nothing ties the lifetime of the provider to the service.</li>
+          <li>KServe has no tenant. An <code>LLMInferenceService</code> has no tenant field, and resolving the tenant "through gatewayRef" requires a Gateway.</li>
+          <li>One object has three writers, and two of them write its status.</li>
+          <li><code>MaaSModelRef</code>, <code>MaaSSubscription</code> and <code>MaaSAuthPolicy</code> have no defined role. One service can be published to several tenants today, which a single <code>aiTenantRef</code> cannot express.</li>
+          <li><code>inferencePoolRef</code> holds only a name, while the pool is in another namespace.</li>
+          <li>MaaS still has to stop depending on the HTTPRoute, so the work in MaaS is not smaller.</li>
+        </ul>
+    <h3>Option 2: MaaS creates the ModelProvider</h3>
+    <p>In option 2 KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS creates a <code>ModelProvider</code> for each <code>MaaSModelRef</code>. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace. It needs the <code>ModelProvider</code> API, which is open with no milestone (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>), so it is not preferred now. The preferred option uses the same contract with KServe and reaches this state when the API is adopted. These points are open in it.</p>
+    <ul>
+          <li>The provider references a backend in another namespace. The Praxis design leaves that access to NetworkPolicy and admission policy.</li>
+          <li>No <code>ownerReference</code> links a <code>MaaSModelRef</code> to its provider either, because they are in different namespaces. The finalizer covers deletion.</li>
+          <li>When a service is stopped or deleted, KServe removes the pool and the Service immediately, but the provider stays in the Praxis configuration until MaaS removes it.</li>
+          <li>Canary weights need an owner: they are either copied from the service or defined in MaaS.</li>
+        </ul>
+  </div>
+  <div class="prose">
+    <h3>Comparison</h3>
+    <p>The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in <a href="decision.html">Decision</a>.</p>
+  </div>
+  <div class="tbl wide">
+    <table>
+      <thead><tr><th>Relationship</th><th>Today</th><th>Option 1</th><th>Option 2</th><th>Preferred</th></tr></thead>
+      <tbody>
+        <tr><th>Routing entry for a model</th><td>HTTPRoute, created by KServe</td><td><code>ModelProvider</code>, created by KServe</td><td><code>ModelProvider</code>, created by MaaS</td><td>Routing inline in the tenant's <code>Proxy</code>, written by MaaS</td></tr>
+        <tr><th>Its owner</th><td><code>LLMInferenceService</code>, through an <code>ownerReference</code></td><td>None. The service is in another namespace</td><td>MaaS, through the finalizer on <code>MaaSModelRef</code></td><td>The <code>Proxy</code>, which MaaS owns</td></tr>
+        <tr><th>Its writers</th><td>KServe for the spec, Istio for the status</td><td>KServe for the spec, MaaS and <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td></tr>
+        <tr><th>Source of the tenant</th><td><code>MaaSModelRef.spec.tenantRef</code>, or the route's parent Gateway</td><td>A lookup "through gatewayRef" from the service, not defined</td><td><code>MaaSModelRef.spec.tenantRef</code></td><td><code>MaaSModelRef.spec.tenantRef</code></td></tr>
+        <tr><th>What MaaS reads from KServe</th><td>The HTTPRoute and the service status</td><td>Not specified</td><td>The service status only</td><td>The service status only</td></tr>
+        <tr><th>What KServe has to know</th><td>The tenant Gateway</td><td>The tenant, and the Praxis <code>ModelProvider</code> type</td><td>Nothing new</td><td>Nothing new</td></tr>
+        <tr><th>Per-model token limit</th><td><code>TokenRateLimitPolicy</code> owned by the HTTPRoute</td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td></tr>
+        <tr><th>Writes outside the writer's own namespaces</th><td>MaaS writes policies into the model and the gateway namespaces</td><td>KServe writes the provider into the tenant namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Security and Privacy Considerations</h2>
+    <ul>
+      <li>Authentication and authorization move from Kuadrant policies on the Gateway to a Praxis <code>Policy</code>, which MaaS generates from the same <code>MaaSAuthPolicy</code> and <code>MaaSSubscription</code> objects. The policy engine has no Kubernetes token authentication yet (<a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a>), so a tenant cannot be cut over before it has.</li>
+      <li>KServe gets no new permissions. It writes only in the model namespace and needs no access to the tenant namespace or to Praxis types.</li>
+      <li>MaaS needs permissions for the Praxis types in the tenant namespace, and it keeps writing the <code>InferenceObjective</code> into the model namespace.</li>
+      <li>The proxy of a tenant sends requests to pods in the model namespaces. The Praxis design leaves that access to NetworkPolicy and admission policy, and on the ODH build strict NetworkPolicy has to allow the namespace of the proxy.</li>
+      <li>AFAICT the Praxis <code>ext_proc</code> client has no TLS, while the TLS of the EPP is controlled by a cluster-wide KServe setting. How the proxy connects to the EPP is therefore unresolved for services with a scheduler.</li>
+      <li>No new data is stored. The proxy reads the request body to find the model name, as <code>praxis-extproc</code> does on MaaS gateways today.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Risks</h2>
+    <ul>
+      <li>In the current draft a routing change rolls the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy (<a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.</li>
+      <li>Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.</li>
+      <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
+      <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>.</li>
+      <li>A service without a <code>MaaSModelRef</code> has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.</li>
+      <li>When an <code>LLMInferenceService</code> is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.</li>
+      <li>Canary weights need an owner. They are either read from <code>group</code> and <code>weight</code> on the service, or defined in MaaS. We would not add a weight field to <code>MaaSModelRef</code>, because it would compete with the weight of a <code>ModelProvider</code> later.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Stakeholder Impacts</h2>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Group</th><th>Key Contacts</th><th>Date</th><th>Impacted?</th></tr></thead>
+      <tbody>
+        <tr><td>Model Serving (KServe)</td><td></td><td></td><td>Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that opts in.</td></tr>
+        <tr><td>Models-as-a-Service (MaaS)</td><td></td><td></td><td>Reads the service status in place of the HTTPRoute, writes the routing into the <code>Proxy</code> of the tenant and generates the Praxis <code>Policy</code>. It has the larger share of the work.</td></tr>
+        <tr><td>AI Gateway (Praxis)</td><td></td><td></td><td><code>gateway-controller</code> renders and deploys the proxy from the <code>Proxy</code> and the <code>Policy</code>. The EPP client and the policy engine have open work.</td></tr>
+        <tr><td>Dashboard</td><td></td><td></td><td>No change while the service spec keeps <code>route</code> and <code>gateway.refs</code>. The <code>HTTPRoute</code> column and two progress steps disappear.</td></tr>
+        <tr><td>Users and API clients</td><td></td><td></td><td>They keep the objects they write, the hostname and the model IDs. Per-model path URLs stop working.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>References</h2>
+    <ul><li><a href="decision.html">Decision</a>, with the impact on users and the dashboard</li><li><a href="alternatives.html">Alternatives</a>, with a figure of the custom resources of each option</li><li><a href="context.html">Context</a>, with the state of Praxis and its Gateway API support</li><li><a href="migration.html">Migration</a>, which is a work in progress</li><li><a href="https://github.com/praxis-proxy/gateway-controller">praxis-proxy/gateway-controller</a> and its <a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md">design</a></li></ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Reviews</h2>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Reviewed by</th><th>Date</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 </div>
 
 <div class="md-view" hidden>
   <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
-  <pre class="md-source" tabindex="0"># Option 3: KServe - MaaS - Praxis integration
+  <pre class="md-source" tabindex="0"># ODH-ADR-MS-XXXX: Routing KServe models through Praxis
+
+| | |
+|---|---|
+| Date | 2026-11-20 |
+| Scope | Model Serving (KServe), Models-as-a-Service (MaaS), AI Gateway |
+| Status | Approved |
+| Authors | |
+| Supersedes | N/A |
+| Superseded by: | N/A |
+| Tickets | |
+| Other docs: | [KServe and Praxis integration](https://bartoszmajsak.github.io/kserve-praxis-integration/) |
+
+## What
+
+Moving the data plane from Gateway API on Istio to Praxis removes the per-model HTTPRoute, which is the object MaaS and KServe integrate through today. The preferred way to replace it keeps `MaaSModelRef` as the object users write. KServe publishes the backend in the `LLMInferenceService` status, and MaaS writes the routing into the `Proxy` of the tenant. The `ModelProvider` API can be adopted later.
+
+## Why
 
 Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `LLMInferenceService` receives traffic. The move exposes problems in the integration between MaaS and KServe. A status contract on the `LLMInferenceService`, with MaaS as the owner of the routing, can help in the overall migration process.
-
-| Topic | Summary | Detail |
-|---|---|---|
-| Problem | MaaS and KServe integrate through the HTTPRoute | MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route. |
-| Proposal | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. |
-
-## Praxis in the request path
 
 [`gateway-controller`](https://github.com/praxis-proxy/gateway-controller) is not an ingress controller (yet?). It configures a Praxis proxy that is deployed behind the platform's existing ingress. Currently, that ingress ("any GWAPI provider, or none") "just forwards to it". A Gateway can still be the entry point and forward all traffic to Praxis. **The per-model HTTPRoute is removed**. Praxis routes on the `model` field of the request body, and ["no route is ever written"](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311).
 
@@ -729,11 +862,9 @@ Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writ
 - KServe still creates the EPP, the pool, the Service and the pods. Scheduling stays with the EPP.
 - Nothing writes status back to the `LLMInferenceService`. KServe readiness reads route and pool status today, so that has to change.
 
-## Problems in today's integration
+### Problems in today's integration
 
 Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.
-
-### Between MaaS and KServe
 
 | Shortcoming | What it causes | Fix |
 |---|---|---|
@@ -745,7 +876,27 @@ Currently, MaaS and KServe integrate through the HTTPRoute and not through a def
 | Which requests go through the EPP is only defined in the HTTPRoute. | KServe's route preset sends seven inference endpoints to the `InferencePool`, which means through the EPP, and every other path, such as `/v1/models`, directly to the workload Service. The service status names the pool, the EPP and the Service, and not which request paths belong to which. The preset is configuration and a service can carry its own route spec, so the list cannot be copied into MaaS. | KServe publishes in status which request paths go through the EPP and which go to the Service directly. MaaS writes the routing from it. |
 | Canary weights only exist on a route. | `group` and `weight` are fields of `spec.router.route`, and their status needs a route. `MaaSModelRef` has no weight. A service without a route cannot take part in a canary. | Either KServe allows `group` and `weight` without a route, or MaaS holds the weights. |
 
-## MaaSModelRef only, ModelProvider later
+## Goals
+
+- Models published through MaaS are served through Praxis without a per-model HTTPRoute.
+- Users and the dashboard keep writing the same objects. Clients keep the hostname, the request URL with the model in the body, and the model ID.
+- MaaS and KServe integrate through one contract, the `LLMInferenceService` status, and every object has one writer.
+- Upstream KServe needs no Praxis types and no tenant concept.
+- The first step does not wait for APIs that are still open in Praxis, and the `ModelProvider` can be adopted later without a user-facing change.
+- A tenant can move in stages and be rolled back, and the preparation can start before Praxis is ready.
+
+## Non-Goals
+
+- Praxis routing for services that are not published through MaaS. They stay on Gateway API with Kuadrant.
+- Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
+- Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
+- Canary and weighted routing between services in the first step. The owner of the weights is still open.
+- An ingress without Gateway API. The tenant Gateway stays in front of the proxy.
+- Per-model path URLs of the form `/&lt;namespace&gt;/&lt;name&gt;/v1/...` through Praxis.
+- Moving a single model. The unit of the cut-over is the tenant.
+- Closing the gaps in Praxis itself: proxy deployment, the EPP client and the policy engine. We depend on them and track them.
+
+## How
 
 We propose to keep `MaaSModelRef` as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and `Ready`, with or without a route. MaaS reads that status and writes the routing of each published model into the `Proxy` of the tenant, next to the policy slot, and `gateway-controller` renders it. No `ModelProvider` is created.
 
@@ -772,17 +923,7 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 - **Several tenants per service need no extra API.** One service can be published to several tenants today, with one `MaaSModelRef` each.
 - **Adopting the `ModelProvider` later needs no change for users or for KServe.** The contract with KServe and the user-facing objects stay the same.
 
-### Costs and limits
-
-- In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
-- Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
-- All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
-- The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
-- A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
-- When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
-- Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
-
-## Changes in upstream KServe
+### Changes in upstream KServe
 
 KServe creates no new objects. It has to publish complete status for a service without a route: today such a service with a scheduler never becomes `Ready`, and its status does not include the pool. We read this from [`kserve/kserve`](https://github.com/kserve/kserve) master at [`cdbe986058`](https://github.com/kserve/kserve/commit/cdbe9860583e36f29d46a58179d86299e8faa41d). The sizes are estimates from reading the code. None of it has been implemented.
 
@@ -801,7 +942,7 @@ KServe creates no new objects. It has to publish complete status for a service w
 - ODH build: reconcile the scheduler before the Kuadrant auth check. Today the check returns first, so with the `AuthPolicy` CRD gone no EPP is created for a service with auth enabled.
 - ODH build: give strict NetworkPolicy a way to allow the proxy's namespace. Today it takes the allowed namespaces from Gateway references only.
 
-## Changes in MaaS
+### Changes in MaaS
 
 MaaS has the larger share of the work. It derives nearly all model information from the HTTPRoute today, so that dependency has to be removed first. Most rows are needed for any integration with Praxis, and only the last four follow from MaaS writing the routing. This comes from [`opendatahub-io/models-as-a-service`](https://github.com/opendatahub-io/models-as-a-service) at [`e0afdbc`](https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be).
 
@@ -822,6 +963,88 @@ MaaS has the larger share of the work. It derives nearly all model information f
 
 - MaaS has no Praxis control-plane code today. Nothing in the repository refers to `praxis.io`.
 - Grid in [`odh-model-controller`](https://github.com/opendatahub-io/odh-model-controller) needs the first change too: it stops publishing a provider when `status.router` is empty.
+
+## Alternatives
+
+Two other ways to replace the per-model HTTPRoute were considered.
+
+### Option 1: KServe creates the ModelProvider
+
+Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider. It is not preferred for these reasons.
+
+- KServe writes into a namespace it does not manage. An `ownerReference` cannot cross namespaces, so nothing ties the lifetime of the provider to the service.
+- KServe has no tenant. An `LLMInferenceService` has no tenant field, and resolving the tenant "through gatewayRef" requires a Gateway.
+- One object has three writers, and two of them write its status.
+- `MaaSModelRef`, `MaaSSubscription` and `MaaSAuthPolicy` have no defined role. One service can be published to several tenants today, which a single `aiTenantRef` cannot express.
+- `inferencePoolRef` holds only a name, while the pool is in another namespace.
+- MaaS still has to stop depending on the HTTPRoute, so the work in MaaS is not smaller.
+
+### Option 2: MaaS creates the ModelProvider
+
+In option 2 KServe publishes the backend in the `LLMInferenceService` status, and MaaS creates a `ModelProvider` for each `MaaSModelRef`. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace. It needs the `ModelProvider` API, which is open with no milestone ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)), so it is not preferred now. The preferred option uses the same contract with KServe and reaches this state when the API is adopted. These points are open in it.
+
+- The provider references a backend in another namespace. The Praxis design leaves that access to NetworkPolicy and admission policy.
+- No `ownerReference` links a `MaaSModelRef` to its provider either, because they are in different namespaces. The finalizer covers deletion.
+- When a service is stopped or deleted, KServe removes the pool and the Service immediately, but the provider stays in the Praxis configuration until MaaS removes it.
+- Canary weights need an owner: they are either copied from the service or defined in MaaS.
+
+### Comparison
+
+The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+
+| Relationship | Today | Option 1 | Option 2 | Preferred |
+|---|---|---|---|---|
+| Routing entry for a model | HTTPRoute, created by KServe | `ModelProvider`, created by KServe | `ModelProvider`, created by MaaS | Routing inline in the tenant's `Proxy`, written by MaaS |
+| Its owner | `LLMInferenceService`, through an `ownerReference` | None. The service is in another namespace | MaaS, through the finalizer on `MaaSModelRef` | The `Proxy`, which MaaS owns |
+| Its writers | KServe for the spec, Istio for the status | KServe for the spec, MaaS and `gateway-controller` for the status | MaaS for the spec, `gateway-controller` for the status | MaaS for the spec, `gateway-controller` for the status |
+| Source of the tenant | `MaaSModelRef.spec.tenantRef`, or the route's parent Gateway | A lookup "through gatewayRef" from the service, not defined | `MaaSModelRef.spec.tenantRef` | `MaaSModelRef.spec.tenantRef` |
+| What MaaS reads from KServe | The HTTPRoute and the service status | Not specified | The service status only | The service status only |
+| What KServe has to know | The tenant Gateway | The tenant, and the Praxis `ModelProvider` type | Nothing new | Nothing new |
+| Per-model token limit | `TokenRateLimitPolicy` owned by the HTTPRoute | Rules in the `Policy` | Rules in the `Policy` | Rules in the `Policy` |
+| Writes outside the writer's own namespaces | MaaS writes policies into the model and the gateway namespaces | KServe writes the provider into the tenant namespace | MaaS writes the `InferenceObjective` into the model namespace | MaaS writes the `InferenceObjective` into the model namespace |
+
+## Security and Privacy Considerations
+
+- Authentication and authorization move from Kuadrant policies on the Gateway to a Praxis `Policy`, which MaaS generates from the same `MaaSAuthPolicy` and `MaaSSubscription` objects. The policy engine has no Kubernetes token authentication yet ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213)), so a tenant cannot be cut over before it has.
+- KServe gets no new permissions. It writes only in the model namespace and needs no access to the tenant namespace or to Praxis types.
+- MaaS needs permissions for the Praxis types in the tenant namespace, and it keeps writing the `InferenceObjective` into the model namespace.
+- The proxy of a tenant sends requests to pods in the model namespaces. The Praxis design leaves that access to NetworkPolicy and admission policy, and on the ODH build strict NetworkPolicy has to allow the namespace of the proxy.
+- AFAICT the Praxis `ext_proc` client has no TLS, while the TLS of the EPP is controlled by a cluster-wide KServe setting. How the proxy connects to the EPP is therefore unresolved for services with a scheduler.
+- No new data is stored. The proxy reads the request body to find the model name, as `praxis-extproc` does on MaaS gateways today.
+
+## Risks
+
+- In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
+- Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
+- All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
+- The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
+- A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
+- When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
+- Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+
+## Stakeholder Impacts
+
+| Group | Key Contacts | Date | Impacted? |
+|---|---|---|---|
+| Model Serving (KServe) | | | Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that opts in. |
+| Models-as-a-Service (MaaS) | | | Reads the service status in place of the HTTPRoute, writes the routing into the `Proxy` of the tenant and generates the Praxis `Policy`. It has the larger share of the work. |
+| AI Gateway (Praxis) | | | `gateway-controller` renders and deploys the proxy from the `Proxy` and the `Policy`. The EPP client and the policy engine have open work. |
+| Dashboard | | | No change while the service spec keeps `route` and `gateway.refs`. The `HTTPRoute` column and two progress steps disappear. |
+| Users and API clients | | | They keep the objects they write, the hostname and the model IDs. Per-model path URLs stop working. |
+
+## References
+
+- [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html), with the impact on users and the dashboard
+- [Alternatives](https://bartoszmajsak.github.io/kserve-praxis-integration/alternatives.html), with a figure of the custom resources of each option
+- [Context](https://bartoszmajsak.github.io/kserve-praxis-integration/context.html), with the state of Praxis and its Gateway API support
+- [Migration](https://bartoszmajsak.github.io/kserve-praxis-integration/migration.html), which is a work in progress
+- [praxis-proxy/gateway-controller](https://github.com/praxis-proxy/gateway-controller) and its [design](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md)
+
+## Reviews
+
+| Reviewed by | Date | Notes |
+|---|---|---|
+| | | |
 </pre>
 </div>
 

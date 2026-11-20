@@ -59,7 +59,7 @@
 <section>
   <div class="prose">
     <h2>Option 1: KServe creates the ModelProvider</h2>
-    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it.</p>
+    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider.</p>
   </div>
   <figure>
     <div class="scroll">

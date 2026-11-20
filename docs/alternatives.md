@@ -37,7 +37,7 @@ The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRou
 
 ## Option 1: KServe creates the ModelProvider
 
-Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it.
+Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it. Its advantage is that it needs no new status contract, because the component that knows the backend writes the provider.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="figs/relationships-option-1-dark.svg"><img src="figs/relationships-option-1.svg" alt="Custom resources in option 1, where KServe creates the ModelProvider"></picture>
 

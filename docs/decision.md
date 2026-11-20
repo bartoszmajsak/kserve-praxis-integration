@@ -68,12 +68,21 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 ## Costs and limits
 
 - In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
-- Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
+- Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
 - All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
 - The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
 - A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+
+## Security and privacy
+
+- Authentication and authorization move from Kuadrant policies on the Gateway to a Praxis `Policy`, which MaaS generates from the same `MaaSAuthPolicy` and `MaaSSubscription` objects. The policy engine has no Kubernetes token authentication yet ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213)), so a tenant cannot be cut over before it has.
+- KServe gets no new permissions. It writes only in the model namespace and needs no access to the tenant namespace or to Praxis types.
+- MaaS needs permissions for the Praxis types in the tenant namespace, and it keeps writing the `InferenceObjective` into the model namespace.
+- The proxy of a tenant sends requests to pods in the model namespaces. The Praxis design leaves that access to NetworkPolicy and admission policy, and on the ODH build strict NetworkPolicy has to allow the namespace of the proxy.
+- AFAICT the Praxis `ext_proc` client has no TLS, while the TLS of the EPP is controlled by a cluster-wide KServe setting. How the proxy connects to the EPP is therefore unresolved for services with a scheduler.
+- No new data is stored. The proxy reads the request body to find the model name, as `praxis-extproc` does on MaaS gateways today.
 
 ## Adopting the ModelProvider later
 
