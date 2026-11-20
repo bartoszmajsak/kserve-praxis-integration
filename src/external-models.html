@@ -24,7 +24,7 @@
   <div>
     <span class="q">Open</span>
     <span class="a">Which component writes the routing</span>
-    <p>The decision covers KServe models. For external models the documents we read name three different writers.</p>
+    <p>The decision covers KServe models. For external models the documents we read name three different writers. We recommend MaaS.</p>
   </div>
 </div>
 
@@ -172,10 +172,51 @@
 
 <section>
   <div class="prose">
+    <h2>Recommended control plane</h2>
+    <p>We recommend that the component that writes the rest of the <code>Proxy</code> of a tenant also writes the routing and the upstream clusters of its external models. Under the decision that is MaaS. AGC keeps resolving the providers and publishes the result in the status of the <code>ExternalModel</code>, which MaaS reads. This is a recommendation and has not been agreed.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <!-- figure: external-control-plane -->
+    </div>
+    <figcaption>MaaS is the only writer of the <code>Proxy</code>. AGC writes the status of the <code>ExternalModel</code> and the copy of the credential Secret, and the user writes the rest. The marks are explained in <a href="alternatives.html">Alternatives</a>.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>The user writes the <code>ExternalProvider</code>, the <code>ExternalModel</code>, the credential Secret and the <code>MaaSModelRef</code>, as today.</li>
+          <li>AGC resolves the providers of an <code>ExternalModel</code> into its status: the host, the port, the TLS settings, the credential reference and the weight. It computes this today in a resolver that has no access to the cluster (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/resolver/resolver.go#L1-L2" target="_blank" rel="noopener"><code>resolver.go:1-2</code></a>). It also copies the credential Secret into the tenant namespace, as it does today (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/attachment.go#L72" target="_blank" rel="noopener"><code>attachment.go:72</code></a>).</li>
+          <li>MaaS reads that status and writes the routing and one upstream cluster per provider into the <code>Proxy</code> of the tenant, next to the entries for KServe models.</li>
+          <li><code>gateway-controller</code> renders and deploys the proxy, and the proxy connects to the provider.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+
+  <div class="prose">
+    <h3>Why this arrangement</h3>
+    <ul>
+      <li><strong>One writer per <code>Proxy</code>.</strong> The filters of a chain are ordered, so two controllers that compose one chain depend on the output of each other.</li>
+      <li><strong>The same contract as for KServe models.</strong> The component that knows the backend publishes it in status, and MaaS writes the <code>Proxy</code>.</li>
+      <li><strong>The provider logic stays in AGC.</strong> Weights, references to providers in other namespaces, credential copies and the API format per provider are implemented there.</li>
+    </ul>
+    <h3>What it does not solve</h3>
+    <ul>
+      <li>Weights need the overlay file in the proxy, because inline candidates of <code>intelligent_route</code> cannot carry weights (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L201-L204" target="_blank" rel="noopener"><code>intelligent_route.md:201-204</code></a>). A <code>Proxy</code> has no field for a mounted file.</li>
+      <li>A <code>Proxy</code> offers Secret keys as environment variables only. AFAICT an environment variable does not follow a Secret rotation without a restart.</li>
+      <li>The alternative that is also consistent is AGC as the single writer of the <code>Proxy</code>, for KServe models and external models, as the AGC draft proposes. It reverses the decision that MaaS writes the routing of KServe models.</li>
+      <li>Later both kinds can move to <code>ModelProvider</code> and <code>Model</code>, rendered by <code>gateway-controller</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
     <h2>Open points</h2>
     <p>The decision for KServe models has MaaS write the routing into the <code>Proxy</code> of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.</p>
     <ul>
-      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers.</li>
+      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers. We recommend MaaS, as described above.</li>
       <li><strong>What MaaS reads for an external model without the HTTPRoute.</strong> The status of the <code>MaaSModelRef</code> and the targets of the policies come from that route today.</li>
       <li><strong>How the credential reaches the proxy.</strong> Today the kubelet projects the Secret as a file into the <code>ext_proc</code> pod. The <code>Proxy</code> type offers Secret keys as environment variables only (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43" target="_blank" rel="noopener"><code>proxy_types.go:41-43</code></a>).</li>
       <li><strong>How a private CA is trusted.</strong> An <code>ExternalProvider</code> defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69" target="_blank" rel="noopener"><code>externalprovider_types.go:65-69</code></a>). Praxis needs the CA as a file in its own pod.</li>

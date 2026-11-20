@@ -176,6 +176,64 @@ def external_request_path():
     return f
 
 
+@figure("external-control-plane", "Custom resources of an external model with MaaS as the writer of the Proxy")
+def external_control_plane():
+    f = RelFig("r5", 1040, 520,
+               "Custom resources of an external model in the recommended arrangement. The user writes the "
+               "MaaSModelRef, the ExternalModel, the ExternalProvider and the credential Secret. AGC resolves the "
+               "providers into the status of the ExternalModel and copies the Secret into the tenant namespace. MaaS "
+               "reads that status and writes the routing and one upstream cluster per provider into the Proxy of the "
+               "tenant, which gateway-controller renders.")
+    t = Lane(f, "T", "Tenant namespace")
+    ten = t.add("AITenant", "platform admin", ["maps the tenant to its Proxy"])
+    sub = t.add("MaaSSubscription", "admin", ["token limits per model"])
+    auth = t.add("MaaSAuthPolicy", "admin", ["who may call which model"])
+    proxy = t.add("Proxy", "MaaS", ["policy slot: the Policy", "routing, one cluster per provider", "secretEnv: the credential copy"], "maas")
+    t.add("Policy", "MaaS", ["from subscriptions, auth policies"], "maas")
+    copy = t.add("Secret, copy", "AGC", ["credential for the proxy"], "agc")
+    t_bottom = t.close()
+
+    m = Lane(f, "M", "Model namespace")
+    ref = m.add("MaaSModelRef", "user", ["modelRef: ExternalModel", "publishes the model to a tenant"])
+    model = m.add("ExternalModel", "user", ["externalProviderRefs, weights", "status: resolved providers,", "written by AGC"])
+    prov = m.add("ExternalProvider", "user", ["host of the provider, TLS config", "auth.secretRef: the Secret"])
+    sec = m.add("Secret", "user", ["the provider credential"])
+    bottom = max(t_bottom, m.close())
+
+    g = Lane(f, "G", "Praxis data plane")
+    g.add("Tenant Gateway", "platform", ["forwards to the Praxis Service"])
+    g.add("Praxis proxy", "gateway-controller", ["rendered from Proxy and Policy,", "connects to the provider"], "gc")
+    g.add("Provider", "outside the cluster", ["such as OpenAI or Anthropic"])
+    g.close()
+
+    f.line([left(ref, 92), right(ten, 92)])
+    f.pill(330, 92, "tenantRef")
+    f.line([right(sub), (292, sub[1] + sub[3] / 2)], head=False)
+    f.line([right(auth), (292, auth[1] + auth[3] / 2), (292, 116), left(ref, 116)])
+    f.pill(350, 116, "modelRefs")
+    # MaaS reads the resolved providers and writes them into the Proxy.
+    f.line([left(model, model[1] + 66), (330, model[1] + 66), (330, proxy[1] + 16), right(proxy, proxy[1] + 16)], "maas", dash=True)
+    f.pill(330, (model[1] + 66 + proxy[1] + 16) / 2 + 22, "MaaS writes routing", "maas")
+    # AGC resolves the providers into the status of the model, and copies the credential.
+    py = prov[1] + prov[3] / 2
+    f.line([right(prov, py), (705, py), (705, model[1] + 50), right(model, model[1] + 50)], dash=True)
+    f.pill(705, (py + model[1] + 50) / 2, "AGC resolves")
+    sy, cy = sec[1] + sec[3] / 2, copy[1] + copy[3] / 2
+    f.line([left(sec, sy), (350, sy), (350, cy), right(copy, cy)], dash=True)
+    f.pill(350, (sy + cy) / 2, "AGC copies")
+    f.h = bottom + 16
+    f.legend([
+        ("tile", "", "user or admin"),
+        ("tile", "maas", "MaaS"),
+        ("tile", "agc", "AGC"),
+        ("tile", "gc", "gateway-controller"),
+        ("line", "", "reference held in a field"),
+        ("dash", "", "controller action, no reference"),
+        ("group", "", "namespace"),
+    ])
+    return f
+
+
 # --- migration -------------------------------------------------------------------
 
 @figure("migration-stages", "Client request path in the four migration stages")

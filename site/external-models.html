@@ -254,7 +254,7 @@
   <div>
     <span class="q">Open</span>
     <span class="a">Which component writes the routing</span>
-    <p>The decision covers KServe models. For external models the documents we read name three different writers.</p>
+    <p>The decision covers KServe models. For external models the documents we read name three different writers. We recommend MaaS.</p>
   </div>
 </div>
 
@@ -547,10 +547,187 @@
 
 <section>
   <div class="prose">
+    <h2>Recommended control plane</h2>
+    <p>We recommend that the component that writes the rest of the <code>Proxy</code> of a tenant also writes the routing and the upstream clusters of its external models. Under the decision that is MaaS. AGC keeps resolving the providers and publishes the result in the status of the <code>ExternalModel</code>, which MaaS reads. This is a recommendation and has not been agreed.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 574" role="img" aria-label="Custom resources of an external model in the recommended arrangement. The user writes the MaaSModelRef, the ExternalModel, the ExternalProvider and the credential Secret. AGC resolves the providers into the status of the ExternalModel and copies the Secret into the tenant namespace. MaaS reads that status and writes the routing and one upstream cluster per provider into the Proxy of the tenant, which gateway-controller renders.">
+        <defs>
+        <marker id="r5-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r5-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="r5-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="r5-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        </defs>
+        <rect class="d-grp " x="774" y="54" width="250" height="232" rx="12"/>
+        <rect class="d-grp " x="395" y="54" width="250" height="342" rx="12"/>
+        <rect class="d-grp " x="16" y="54" width="250" height="434" rx="12"/>
+        <polyline class="d-edge " points="407,92 254,92" marker-end="url(#r5-ah)"/>
+        <polyline class="d-edge " points="254,167.0 292,167.0"/>
+        <polyline class="d-edge " points="254,229.0 292,229.0 292,116 407,116" marker-end="url(#r5-ah)"/>
+        <polyline class="d-edge maas dash" points="407,222 330,222 330,280 254,280" marker-end="url(#r5-ah-maas)"/>
+        <polyline class="d-edge  dash" points="633,285.0 705,285.0 705,206 633,206" marker-end="url(#r5-ah)"/>
+        <polyline class="d-edge  dash" points="407,355.0 350,355.0 350,447.0 254,447.0" marker-end="url(#r5-ah)"/>
+        <rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+        <rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="94.5">AITenant</text>
+        <text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+        <text class="d-s" x="40" y="120">maps the tenant to its Proxy</text>
+        <rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+        <rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+        <text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="182">token limits per model</text>
+        <rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+        <rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+        <text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+        <text class="d-s" x="40" y="244">who may call which model</text>
+        <rect class="d-tile" x="28" y="264" width="226" height="86" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+        <rect class="d-tile-b maas" x="28" y="264" width="226" height="86" rx="8"/>
+        <text class="d-kind maas" x="40" y="280.5">Proxy</text>
+        <text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="306">policy slot: the Policy</text>
+        <text class="d-s" x="40" y="322">routing, one cluster per provider</text>
+        <text class="d-s" x="40" y="338">secretEnv: the credential copy</text>
+        <rect class="d-tile" x="28" y="358" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head maas" d="M28.6 382V366Q28.6 358.6 36 358.6H246Q253.4 358.6 253.4 366V382Z"/>
+        <rect class="d-tile-b maas" x="28" y="358" width="226" height="54" rx="8"/>
+        <text class="d-kind maas" x="40" y="374.5">Policy</text>
+        <text class="d-own" x="244" y="374" text-anchor="end">MaaS</text>
+        <text class="d-s" x="40" y="400">from subscriptions, auth policies</text>
+        <rect class="d-tile" x="28" y="420" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head agc" d="M28.6 444V428Q28.6 420.6 36 420.6H246Q253.4 420.6 253.4 428V444Z"/>
+        <rect class="d-tile-b agc" x="28" y="420" width="226" height="54" rx="8"/>
+        <text class="d-kind agc" x="40" y="436.5">Secret, copy</text>
+        <text class="d-own" x="244" y="436" text-anchor="end">AGC</text>
+        <text class="d-s" x="40" y="462">credential for the proxy</text>
+        <rect class="d-tab " x="30" y="44" width="123" height="20" rx="5"/>
+        <text class="d-tabt" x="91.5" y="58" text-anchor="middle">Tenant namespace</text>
+        <rect class="d-tile" x="407" y="78" width="226" height="70" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+        <rect class="d-tile-b " x="407" y="78" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+        <text class="d-own" x="623" y="94" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="120">modelRef: ExternalModel</text>
+        <text class="d-s" x="419" y="136">publishes the model to a tenant</text>
+        <rect class="d-tile" x="407" y="156" width="226" height="86" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M407.6 180V164Q407.6 156.6 415 156.6H625Q632.4 156.6 632.4 164V180Z"/>
+        <rect class="d-tile-b " x="407" y="156" width="226" height="86" rx="8"/>
+        <text class="d-kind " x="419" y="172.5">ExternalModel</text>
+        <text class="d-own" x="623" y="172" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="198">externalProviderRefs, weights</text>
+        <text class="d-s" x="419" y="214">status: resolved providers,</text>
+        <text class="d-s" x="419" y="230">written by AGC</text>
+        <rect class="d-tile" x="407" y="250" width="226" height="70" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M407.6 274V258Q407.6 250.6 415 250.6H625Q632.4 250.6 632.4 258V274Z"/>
+        <rect class="d-tile-b " x="407" y="250" width="226" height="70" rx="8"/>
+        <text class="d-kind " x="419" y="266.5">ExternalProvider</text>
+        <text class="d-own" x="623" y="266" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="292">host of the provider, TLS config</text>
+        <text class="d-s" x="419" y="308">auth.secretRef: the Secret</text>
+        <rect class="d-tile" x="407" y="328" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M407.6 352V336Q407.6 328.6 415 328.6H625Q632.4 328.6 632.4 336V352Z"/>
+        <rect class="d-tile-b " x="407" y="328" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="419" y="344.5">Secret</text>
+        <text class="d-own" x="623" y="344" text-anchor="end">user</text>
+        <text class="d-s" x="419" y="370">the provider credential</text>
+        <rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+        <text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+        <rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+        <rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="94.5">Tenant Gateway</text>
+        <text class="d-own" x="1002" y="94" text-anchor="end">platform</text>
+        <text class="d-s" x="798" y="120">forwards to the Praxis Service</text>
+        <rect class="d-tile" x="786" y="140" width="226" height="70" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head gc" d="M786.6 164V148Q786.6 140.6 794 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+        <rect class="d-tile-b gc" x="786" y="140" width="226" height="70" rx="8"/>
+        <text class="d-kind gc" x="798" y="156.5">Praxis proxy</text>
+        <text class="d-own" x="1002" y="156" text-anchor="end">gateway-controller</text>
+        <text class="d-s" x="798" y="182">rendered from Proxy and Policy,</text>
+        <text class="d-s" x="798" y="198">connects to the provider</text>
+        <rect class="d-tile" x="786" y="218" width="226" height="54" rx="8" filter="url(#r5-sh)"/>
+        <path class="d-head " d="M786.6 242V226Q786.6 218.6 794 218.6H1004Q1011.4 218.6 1011.4 226V242Z"/>
+        <rect class="d-tile-b " x="786" y="218" width="226" height="54" rx="8"/>
+        <text class="d-kind " x="798" y="234.5">Provider</text>
+        <text class="d-own" x="1002" y="234" text-anchor="end">outside the cluster</text>
+        <text class="d-s" x="798" y="260">such as OpenAI or Anthropic</text>
+        <rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+        <text class="d-tabt" x="852.5" y="58" text-anchor="middle">Praxis data plane</text>
+        <rect class="d-pill " x="296.0" y="83" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="330" y="95.6" text-anchor="middle">tenantRef</text>
+        <rect class="d-pill " x="316.0" y="107" width="68" height="18" rx="9"/>
+        <text class="d-pillt " x="350" y="119.6" text-anchor="middle">modelRefs</text>
+        <rect class="d-pill maas" x="268.0" y="264.0" width="124" height="18" rx="9"/>
+        <text class="d-pillt maas" x="330" y="276.6" text-anchor="middle">MaaS writes routing</text>
+        <rect class="d-pill " x="662.5" y="236.5" width="85" height="18" rx="9"/>
+        <text class="d-pillt " x="705" y="249.1" text-anchor="middle">AGC resolves</text>
+        <rect class="d-pill " x="313.0" y="392.0" width="74" height="18" rx="9"/>
+        <text class="d-pillt " x="350" y="404.6" text-anchor="middle">AGC copies</text>
+        <rect class="d-legend" x="16" y="508" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b " x="32" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="527.8">user or admin</text>
+        <rect class="d-tile" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b maas" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="186.7" y="527.8">MaaS</text>
+        <rect class="d-tile" x="236.29999999999998" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b agc" x="236.29999999999998" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="262.29999999999995" y="527.8">AGC</text>
+        <rect class="d-tile" x="306.0" y="518.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b gc" x="306.0" y="518.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="332.0" y="527.8">gateway-controller</text>
+        <line class="d-edge " x1="464.2" y1="524.0" x2="494.2" y2="524.0" marker-end="url(#r5-ah)"/>
+        <text class="d-lg" x="502.2" y="527.8">reference held in a field</text>
+        <line class="d-edge  dash" x1="675.7" y1="524.0" x2="705.7" y2="524.0" marker-end="url(#r5-ah)"/>
+        <text class="d-lg" x="713.7" y="527.8">controller action, no reference</text>
+        <rect class="d-grp " x="32" y="540.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="549.8">namespace</text>
+      </svg>
+    </div>
+    <figcaption>MaaS is the only writer of the <code>Proxy</code>. AGC writes the status of the <code>ExternalModel</code> and the copy of the credential Secret, and the user writes the rest. The marks are explained in <a href="alternatives.html">Alternatives</a>.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>The user writes the <code>ExternalProvider</code>, the <code>ExternalModel</code>, the credential Secret and the <code>MaaSModelRef</code>, as today.</li>
+          <li>AGC resolves the providers of an <code>ExternalModel</code> into its status: the host, the port, the TLS settings, the credential reference and the weight. It computes this today in a resolver that has no access to the cluster (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/resolver/resolver.go#L1-L2" target="_blank" rel="noopener"><code>resolver.go:1-2</code></a>). It also copies the credential Secret into the tenant namespace, as it does today (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/attachment.go#L72" target="_blank" rel="noopener"><code>attachment.go:72</code></a>).</li>
+          <li>MaaS reads that status and writes the routing and one upstream cluster per provider into the <code>Proxy</code> of the tenant, next to the entries for KServe models.</li>
+          <li><code>gateway-controller</code> renders and deploys the proxy, and the proxy connects to the provider.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+
+  <div class="prose">
+    <h3>Why this arrangement</h3>
+    <ul>
+      <li><strong>One writer per <code>Proxy</code>.</strong> The filters of a chain are ordered, so two controllers that compose one chain depend on the output of each other.</li>
+      <li><strong>The same contract as for KServe models.</strong> The component that knows the backend publishes it in status, and MaaS writes the <code>Proxy</code>.</li>
+      <li><strong>The provider logic stays in AGC.</strong> Weights, references to providers in other namespaces, credential copies and the API format per provider are implemented there.</li>
+    </ul>
+    <h3>What it does not solve</h3>
+    <ul>
+      <li>Weights need the overlay file in the proxy, because inline candidates of <code>intelligent_route</code> cannot carry weights (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L201-L204" target="_blank" rel="noopener"><code>intelligent_route.md:201-204</code></a>). A <code>Proxy</code> has no field for a mounted file.</li>
+      <li>A <code>Proxy</code> offers Secret keys as environment variables only. AFAICT an environment variable does not follow a Secret rotation without a restart.</li>
+      <li>The alternative that is also consistent is AGC as the single writer of the <code>Proxy</code>, for KServe models and external models, as the AGC draft proposes. It reverses the decision that MaaS writes the routing of KServe models.</li>
+      <li>Later both kinds can move to <code>ModelProvider</code> and <code>Model</code>, rendered by <code>gateway-controller</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
     <h2>Open points</h2>
     <p>The decision for KServe models has MaaS write the routing into the <code>Proxy</code> of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.</p>
     <ul>
-      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers.</li>
+      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers. We recommend MaaS, as described above.</li>
       <li><strong>What MaaS reads for an external model without the HTTPRoute.</strong> The status of the <code>MaaSModelRef</code> and the targets of the policies come from that route today.</li>
       <li><strong>How the credential reaches the proxy.</strong> Today the kubelet projects the Secret as a file into the <code>ext_proc</code> pod. The <code>Proxy</code> type offers Secret keys as environment variables only (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43" target="_blank" rel="noopener"><code>proxy_types.go:41-43</code></a>).</li>
       <li><strong>How a private CA is trusted.</strong> An <code>ExternalProvider</code> defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69" target="_blank" rel="noopener"><code>externalprovider_types.go:65-69</code></a>). Praxis needs the CA as a file in its own pod.</li>
@@ -590,7 +767,7 @@ External models are served through objects that exist only on Gateway API and Is
 |---|---|---|
 | Today | Envoy connects to the provider | `ai-gateway-controller` chooses the provider in a Praxis `ext_proc` filter and returns the choice to Envoy through an HTTPRoute. Istio objects configure the TLS. |
 | With Praxis | The proxy can connect to the provider | Praxis can connect to a provider over TLS, inject its credential and translate some API formats today. Weights work in one filter only, and failover is missing. |
-| Open | Which component writes the routing | The decision covers KServe models. For external models the documents we read name three different writers. |
+| Open | Which component writes the routing | The decision covers KServe models. For external models the documents we read name three different writers. We recommend MaaS. |
 
 ## Request path
 
@@ -688,11 +865,39 @@ The control-plane design in `gateway-controller` covers external providers with 
 - The design maps `ExternalProvider` and `ExternalModel` to `ModelProvider` and `Model` as ["Near 1:1"](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L550), and calls it a candidate for MaaS to delegate. It lists the question as open ([`api.md:621`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L621)).
 - Weighting and failover between providers are out of scope of the first API version ([`api-v1alpha1.md:386-387`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387)).
 
+## Recommended control plane
+
+We recommend that the component that writes the rest of the `Proxy` of a tenant also writes the routing and the upstream clusters of its external models. Under the decision that is MaaS. AGC keeps resolving the providers and publishes the result in the status of the `ExternalModel`, which MaaS reads. This is a recommendation and has not been agreed.
+
+![Custom resources of an external model with MaaS as the writer of the Proxy](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/external-control-plane.png)
+
+MaaS is the only writer of the `Proxy`. AGC writes the status of the `ExternalModel` and the copy of the credential Secret, and the user writes the rest. The marks are explained in [Alternatives](https://bartoszmajsak.github.io/kserve-praxis-integration/alternatives.html).
+
+### Who does what, and why
+
+- The user writes the `ExternalProvider`, the `ExternalModel`, the credential Secret and the `MaaSModelRef`, as today.
+- AGC resolves the providers of an `ExternalModel` into its status: the host, the port, the TLS settings, the credential reference and the weight. It computes this today in a resolver that has no access to the cluster ([`resolver.go:1-2`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/resolver/resolver.go#L1-L2)). It also copies the credential Secret into the tenant namespace, as it does today ([`attachment.go:72`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/attachment.go#L72)).
+- MaaS reads that status and writes the routing and one upstream cluster per provider into the `Proxy` of the tenant, next to the entries for KServe models.
+- `gateway-controller` renders and deploys the proxy, and the proxy connects to the provider.
+
+### Why this arrangement
+
+- **One writer per `Proxy`.** The filters of a chain are ordered, so two controllers that compose one chain depend on the output of each other.
+- **The same contract as for KServe models.** The component that knows the backend publishes it in status, and MaaS writes the `Proxy`.
+- **The provider logic stays in AGC.** Weights, references to providers in other namespaces, credential copies and the API format per provider are implemented there.
+
+### What it does not solve
+
+- Weights need the overlay file in the proxy, because inline candidates of `intelligent_route` cannot carry weights ([`intelligent_route.md:201-204`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L201-L204)). A `Proxy` has no field for a mounted file.
+- A `Proxy` offers Secret keys as environment variables only. AFAICT an environment variable does not follow a Secret rotation without a restart.
+- The alternative that is also consistent is AGC as the single writer of the `Proxy`, for KServe models and external models, as the AGC draft proposes. It reverses the decision that MaaS writes the routing of KServe models.
+- Later both kinds can move to `ModelProvider` and `Model`, rendered by `gateway-controller`.
+
 ## Open points
 
 The decision for KServe models has MaaS write the routing into the `Proxy` of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.
 
-- **Which component writes the routing of external models.** The AGC draft names AGC, the Praxis design suggests that MaaS delegates to `ModelProvider` and `Model`, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the `Proxy` of a tenant has two writers.
+- **Which component writes the routing of external models.** The AGC draft names AGC, the Praxis design suggests that MaaS delegates to `ModelProvider` and `Model`, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the `Proxy` of a tenant has two writers. We recommend MaaS, as described above.
 - **What MaaS reads for an external model without the HTTPRoute.** The status of the `MaaSModelRef` and the targets of the policies come from that route today.
 - **How the credential reaches the proxy.** Today the kubelet projects the Secret as a file into the `ext_proc` pod. The `Proxy` type offers Secret keys as environment variables only ([`proxy_types.go:41-43`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43)).
 - **How a private CA is trusted.** An `ExternalProvider` defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway ([`externalprovider_types.go:65-69`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69)). Praxis needs the CA as a file in its own pod.
