@@ -260,6 +260,188 @@
 
 <section>
   <div class="prose">
+    <h2>Request path</h2>
+    <p>The component that chooses the provider is the same in both setups, a Praxis filter. What changes is which component connects to the provider. Today that is Envoy, with Istio objects for the TLS. With Praxis as the proxy it is an upstream cluster of the proxy.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 658" role="img" aria-label="Request path of an external model, as stacks of layers. Today the request goes through the Istio Gateway, where two ext_proc filters call Praxis servers around Kuadrant, an HTTPRoute matches the chosen provider, and Envoy connects to the provider with a ServiceEntry and a DestinationRule. With Praxis as the proxy, the tenant Gateway forwards to the proxy, which chooses the provider, adds the credential and connects to the provider through an upstream cluster.">
+        <defs>
+        <marker id="f4-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f4-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f4-ah-px" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah px" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="f4-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        <symbol id="f4-i-hex" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l6 3.5v7L9 16l-6-3.5v-7z"/><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="f4-i-shield" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5.5 2v4.6c0 3.3-2.3 5.9-5.5 7.4-3.2-1.5-5.5-4.1-5.5-7.4V4z"/><path d="M6.6 9l1.7 1.7 3.2-3.4"/></symbol>
+        <symbol id="f4-i-route" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="13.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="13.5" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 11.5V10c0-2 1.3-3 3.3-3h2.4c1.4 0 2.3-.4 2.9-1.1"/></symbol>
+        <symbol id="f4-i-pool" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="8.5" height="8.5" rx="1.5"/><path d="M6.5 6V4.5A1.5 1.5 0 0 1 8 3h5.5A1.5 1.5 0 0 1 15 4.5V10a1.5 1.5 0 0 1-1.5 1.5h-2"/></symbol>
+        <symbol id="f4-i-cr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="13" height="13" rx="2.5"/><text x="9" y="11.6" text-anchor="middle" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">CR</text></symbol>
+        <symbol id="f4-i-ext" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></symbol>
+        <symbol id="f4-i-ctrl" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a5 5 0 1 1-1.7-3.75"/><path d="M12.6 2.6v2.9H9.7"/></symbol>
+        </defs>
+        <rect class="d-grp px" x="548" y="190" width="476" height="278" rx="12"/>
+        <rect class="d-grp gw" x="16" y="104" width="476" height="340" rx="12"/>
+        <polyline class="d-edge " points="254.0,72 254.0,104" marker-end="url(#f4-ah)"/>
+        <polyline class="d-edge " points="786.0,72 786.0,104" marker-end="url(#f4-ah)"/>
+        <polyline class="d-edge " points="786.0,158 786.0,190" marker-end="url(#f4-ah)"/>
+        <polyline class="d-edge warn dash" points="480,403 520,403 520,427 560,427" marker-end="url(#f4-ah-warn)"/>
+        <polyline class="d-edge " points="101,444 101,522" marker-start="url(#f4-ah)" marker-end="url(#f4-ah)"/>
+        <polyline class="d-edge " points="364,444 364,522" marker-end="url(#f4-ah)"/>
+        <polyline class="d-edge " points="896,468 896,522" marker-end="url(#f4-ah)"/>
+        <text class="d-title gw" x="16" y="20">TODAY: ENVOY CONNECTS TO THE PROVIDER</text>
+        <rect class="d-tile" x="194.0" y="36" width="120" height="36" rx="8" filter="url(#f4-sh)"/>
+        <rect class="d-tile-b" x="194.0" y="36" width="120" height="36" rx="8"/>
+        <text class="d-t" x="254.0" y="58.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="30" y="94" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="110.5" y="108" text-anchor="middle">Gateway (Envoy, Istio)</text>
+        <rect class="d-tile" x="28" y="128" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M28.6 152V136Q28.6 128.6 36 128.6H472Q479.4 128.6 479.4 136V152Z"/>
+        <rect class="d-tile-b " x="28" y="128" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-ext" x="36" y="131" width="18" height="18"/>
+        <text class="d-kind " x="60" y="144.5">ext_proc filter, before Kuadrant</text>
+        <text class="d-own" x="470" y="144" text-anchor="end">calls Praxis</text>
+        <text class="d-s" x="40" y="170">reads the model name from the request body</text>
+        <rect class="d-tile" x="28" y="190" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M28.6 214V198Q28.6 190.6 36 190.6H472Q479.4 190.6 479.4 198V214Z"/>
+        <rect class="d-tile-b " x="28" y="190" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-shield" x="36" y="193" width="18" height="18"/>
+        <text class="d-kind " x="60" y="206.5">Kuadrant</text>
+        <text class="d-own" x="470" y="206" text-anchor="end">MaaS writes the policies</text>
+        <text class="d-s" x="40" y="232">auth and token limits on the HTTPRoute of the model</text>
+        <rect class="d-tile" x="28" y="252" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M28.6 276V260Q28.6 252.6 36 252.6H472Q479.4 252.6 479.4 260V276Z"/>
+        <rect class="d-tile-b " x="28" y="252" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-ext" x="36" y="255" width="18" height="18"/>
+        <text class="d-kind " x="60" y="268.5">ext_proc filter, after Kuadrant</text>
+        <text class="d-own" x="470" y="268" text-anchor="end">calls Praxis</text>
+        <text class="d-s" x="40" y="294">chooses the provider and adds the credential</text>
+        <rect class="d-tile" x="28" y="314" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M28.6 338V322Q28.6 314.6 36 314.6H472Q479.4 314.6 479.4 322V338Z"/>
+        <rect class="d-tile-b " x="28" y="314" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-route" x="36" y="317" width="18" height="18"/>
+        <text class="d-kind " x="60" y="330.5">HTTPRoute, one per model</text>
+        <text class="d-own" x="470" y="330" text-anchor="end">AGC writes it</text>
+        <text class="d-s" x="40" y="356">matches the chosen provider, to an ExternalName Service</text>
+        <rect class="d-tile" x="28" y="376" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head warn" d="M28.6 400V384Q28.6 376.6 36 376.6H472Q479.4 376.6 479.4 384V400Z"/>
+        <rect class="d-tile-b warn" x="28" y="376" width="452" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f4-i-hex" x="36" y="379" width="18" height="18"/>
+        <text class="d-kind warn" x="60" y="392.5">ServiceEntry, DestinationRule</text>
+        <text class="d-own" x="470" y="392" text-anchor="end">AGC writes them</text>
+        <text class="d-s" x="40" y="418">host, TLS, SNI and CA of the provider</text>
+        <text class="d-title px" x="548" y="20">WITH PRAXIS (DRAFT): THE PROXY CONNECTS TO THE PROVIDER</text>
+        <rect class="d-tile" x="726.0" y="36" width="120" height="36" rx="8" filter="url(#f4-sh)"/>
+        <rect class="d-tile-b" x="726.0" y="36" width="120" height="36" rx="8"/>
+        <text class="d-t" x="786.0" y="58.5" text-anchor="middle">Client</text>
+        <rect class="d-tile" x="560" y="104" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M560.6 128V112Q560.6 104.6 568 104.6H1004Q1011.4 104.6 1011.4 112V128Z"/>
+        <rect class="d-tile-b " x="560" y="104" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-hex" x="568" y="107" width="18" height="18"/>
+        <text class="d-kind " x="592" y="120.5">Tenant Gateway</text>
+        <text class="d-own" x="1002" y="120" text-anchor="end">forwards only</text>
+        <text class="d-s" x="572" y="146">one route to the proxy of the tenant</text>
+        <rect class="d-tab px" x="562" y="180" width="198" height="20" rx="5"/>
+        <text class="d-tabt" x="661.0" y="194" text-anchor="middle">Praxis proxy, one per tenant</text>
+        <rect class="d-tile" x="560" y="214" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M560.6 238V222Q560.6 214.6 568 214.6H1004Q1011.4 214.6 1011.4 222V238Z"/>
+        <rect class="d-tile-b " x="560" y="214" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-shield" x="568" y="217" width="18" height="18"/>
+        <text class="d-kind " x="592" y="230.5">Policy slot</text>
+        <text class="d-own" x="1002" y="230" text-anchor="end">open for external models</text>
+        <text class="d-s" x="572" y="256">auth and token limits</text>
+        <rect class="d-tile" x="560" y="276" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M560.6 300V284Q560.6 276.6 568 276.6H1004Q1011.4 276.6 1011.4 284V300Z"/>
+        <rect class="d-tile-b " x="560" y="276" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-route" x="568" y="279" width="18" height="18"/>
+        <text class="d-kind " x="592" y="292.5">intelligent_route</text>
+        <text class="d-own" x="1002" y="292" text-anchor="end">writer is open</text>
+        <text class="d-s" x="572" y="318">chooses the provider by model name and weight</text>
+        <rect class="d-tile" x="560" y="338" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M560.6 362V346Q560.6 338.6 568 338.6H1004Q1011.4 338.6 1011.4 346V362Z"/>
+        <rect class="d-tile-b " x="560" y="338" width="452" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-ext" x="568" y="341" width="18" height="18"/>
+        <text class="d-kind " x="592" y="354.5">credential_inject, translation</text>
+        <text class="d-own" x="1002" y="354" text-anchor="end">in-process</text>
+        <text class="d-s" x="572" y="380">adds the credential, translates the API format</text>
+        <rect class="d-tile" x="560" y="400" width="452" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head warn" d="M560.6 424V408Q560.6 400.6 568 400.6H1004Q1011.4 400.6 1011.4 408V424Z"/>
+        <rect class="d-tile-b warn" x="560" y="400" width="452" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f4-i-hex" x="568" y="403" width="18" height="18"/>
+        <text class="d-kind warn" x="592" y="416.5">Upstream cluster, one per provider</text>
+        <text class="d-own" x="1002" y="416" text-anchor="end">writer is open</text>
+        <text class="d-s" x="572" y="442">host, TLS, SNI and CA of the provider</text>
+        <rect class="d-pill warn" x="497.0" y="406" width="46" height="18" rx="9"/>
+        <text class="d-pillt warn" x="520" y="418.6" text-anchor="middle">moves</text>
+        <rect class="d-pill " x="69.5" y="474" width="63" height="18" rx="9"/>
+        <text class="d-pillt " x="101" y="486.6" text-anchor="middle">ext_proc</text>
+        <rect class="d-tile" x="16" y="522" width="200" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M16.6 546V530Q16.6 522.6 24 522.6H208Q215.4 522.6 215.4 530V546Z"/>
+        <rect class="d-tile-b " x="16" y="522" width="200" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-ext" x="24" y="525" width="18" height="18"/>
+        <text class="d-kind " x="48" y="538.5">Praxis ext_proc</text>
+        <text class="d-own" x="206" y="538" text-anchor="end">AGC</text>
+        <text class="d-s" x="28" y="564">two servers per tenant</text>
+        <rect class="d-pill " x="302.0" y="470.0" width="124" height="18" rx="9"/>
+        <text class="d-pillt " x="364" y="482.6" text-anchor="middle">TLS to the provider</text>
+        <rect class="d-tile" x="236" y="522" width="256" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M236.6 546V530Q236.6 522.6 244 522.6H484Q491.4 522.6 491.4 530V546Z"/>
+        <rect class="d-tile-b " x="236" y="522" width="256" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-pool" x="244" y="525" width="18" height="18"/>
+        <text class="d-kind " x="268" y="538.5">Provider</text>
+        <text class="d-own" x="482" y="538" text-anchor="end">outside the cluster</text>
+        <text class="d-s" x="248" y="564">such as OpenAI or Anthropic</text>
+        <rect class="d-pill " x="834.0" y="482.0" width="124" height="18" rx="9"/>
+        <text class="d-pillt " x="896" y="494.6" text-anchor="middle">TLS to the provider</text>
+        <rect class="d-tile" x="768" y="522" width="256" height="54" rx="8" filter="url(#f4-sh)"/>
+        <path class="d-head " d="M768.6 546V530Q768.6 522.6 776 522.6H1016Q1023.4 522.6 1023.4 530V546Z"/>
+        <rect class="d-tile-b " x="768" y="522" width="256" height="54" rx="8"/>
+        <use class="d-ico " href="#f4-i-pool" x="776" y="525" width="18" height="18"/>
+        <text class="d-kind " x="800" y="538.5">Provider</text>
+        <text class="d-own" x="1014" y="538" text-anchor="end">outside the cluster</text>
+        <text class="d-s" x="780" y="564">such as OpenAI or Anthropic</text>
+        <rect class="d-legend" x="16" y="592" width="1008" height="54" rx="8"/>
+        <rect class="d-tile" x="32" y="602.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b warn" x="32" y="602.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="611.8">connects to the provider</text>
+        <line class="d-edge " x1="225.60000000000002" y1="608.0" x2="255.60000000000002" y2="608.0" marker-end="url(#f4-ah)"/>
+        <text class="d-lg" x="263.6" y="611.8">request</text>
+        <line class="d-edge warn dash" x1="330.90000000000003" y1="608.0" x2="360.90000000000003" y2="608.0" marker-end="url(#f4-ah-warn)"/>
+        <text class="d-lg" x="368.90000000000003" y="611.8">where that moves</text>
+        <rect class="d-grp " x="489.30000000000007" y="602.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="515.3000000000001" y="611.8">one proxy and the layers inside it</text>
+        <text class="d-lg" x="32" y="633.8">label on the right of a tile: who writes it, or its state</text>
+      </svg>
+    </div>
+    <figcaption>Today a Praxis <code>ext_proc</code> server chooses the provider, and Envoy connects to it. With Praxis as the proxy the same filters run in-process, and the proxy connects to the provider. The right column follows the AGC draft and what Praxis offers today. It is not built.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Today: who does what, and why</h3>
+        <ul>
+          <li>The user writes the <code>ExternalProvider</code>, the <code>ExternalModel</code> and the credential Secret, and publishes the model with a <code>MaaSModelRef</code>.</li>
+          <li>MaaS writes the <code>AuthPolicy</code> and the <code>TokenRateLimitPolicy</code> on the route, and takes the status of the <code>MaaSModelRef</code> from the route.</li>
+          <li>AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.</li>
+          <li>Kuadrant enforces authentication and token limits in the Gateway.</li>
+          <li>Praxis runs as two <code>ext_proc</code> servers. One reads the model name, the other chooses the provider, translates and adds the credential.</li>
+          <li>Envoy, configured by Istio, connects to the provider.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>With Praxis: who does what, and why</h3>
+        <ul>
+          <li>The tenant Gateway forwards to the proxy of the tenant. It no longer carries the routing of a model.</li>
+          <li>Praxis chooses the provider, adds the credential, translates and connects to the provider, all in one process. No <code>ext_proc</code> call is involved.</li>
+          <li>Which component writes the routing data and the upstream clusters is open. The AGC draft names AGC.</li>
+          <li>How the MaaS policies for external models are enforced in the proxy is open.</li>
+          <li>AFAICT the HTTPRoute, the <code>ExternalName</code> Service, the <code>ServiceEntry</code>, the <code>DestinationRule</code> and the <code>EnvoyFilter</code> objects are no longer needed.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
     <h2>External models today</h2>
     <p>An external model is a model at a provider outside the cluster, such as OpenAI or Anthropic. We read how it is modelled and routed in <code>ai-gateway-controller</code> (AGC) at <a href="https://github.com/opendatahub-io/ai-gateway-controller/commit/02aa4430a07c484a76f5dbcb338ebd726fa48863" target="_blank" rel="noopener"><code>02aa443</code></a> and in MaaS at <a href="https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be" target="_blank" rel="noopener"><code>e0afdbc</code></a>.</p>
     <h3>Objects</h3>
@@ -288,15 +470,6 @@
     <ul>
       <li>The provider is chosen at random or by weight. There is no failover: the controller <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L61-L63" target="_blank" rel="noopener">"does not add controller/ExtProc rollout coordination, health-aware selection, or retries"</a>, and the filter <a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L224-L225" target="_blank" rel="noopener">"does not probe upstream health or retry another candidate when a selected upstream fails"</a>.</li>
       <li>Praxis never connects to the provider in this setup. It selects the provider, and Envoy forwards the request.</li>
-    </ul>
-    <h3>Who does what, and why</h3>
-    <ul>
-      <li>The user writes the <code>ExternalProvider</code>, the <code>ExternalModel</code> and the credential Secret, and publishes the model with a <code>MaaSModelRef</code>.</li>
-      <li>MaaS writes the <code>AuthPolicy</code> and the <code>TokenRateLimitPolicy</code> on the route, and takes the status of the <code>MaaSModelRef</code> from the route.</li>
-      <li>AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.</li>
-      <li>Kuadrant enforces authentication and token limits in the Gateway.</li>
-      <li>Praxis runs as two <code>ext_proc</code> servers. One reads the model name, the other chooses the provider, translates and adds the credential.</li>
-      <li>Envoy, configured by Istio, connects to the provider.</li>
     </ul>
   </div>
 </section>
@@ -419,6 +592,31 @@ External models are served through objects that exist only on Gateway API and Is
 | With Praxis | The proxy can connect to the provider | Praxis can connect to a provider over TLS, inject its credential and translate some API formats today. Weights work in one filter only, and failover is missing. |
 | Open | Which component writes the routing | The decision covers KServe models. For external models the documents we read name three different writers. |
 
+## Request path
+
+The component that chooses the provider is the same in both setups, a Praxis filter. What changes is which component connects to the provider. Today that is Envoy, with Istio objects for the TLS. With Praxis as the proxy it is an upstream cluster of the proxy.
+
+![Request path of an external model today and with Praxis as the proxy](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/external-request-path.png)
+
+Today a Praxis `ext_proc` server chooses the provider, and Envoy connects to it. With Praxis as the proxy the same filters run in-process, and the proxy connects to the provider. The right column follows the AGC draft and what Praxis offers today. It is not built.
+
+### Today: who does what, and why
+
+- The user writes the `ExternalProvider`, the `ExternalModel` and the credential Secret, and publishes the model with a `MaaSModelRef`.
+- MaaS writes the `AuthPolicy` and the `TokenRateLimitPolicy` on the route, and takes the status of the `MaaSModelRef` from the route.
+- AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.
+- Kuadrant enforces authentication and token limits in the Gateway.
+- Praxis runs as two `ext_proc` servers. One reads the model name, the other chooses the provider, translates and adds the credential.
+- Envoy, configured by Istio, connects to the provider.
+
+### With Praxis: who does what, and why
+
+- The tenant Gateway forwards to the proxy of the tenant. It no longer carries the routing of a model.
+- Praxis chooses the provider, adds the credential, translates and connects to the provider, all in one process. No `ext_proc` call is involved.
+- Which component writes the routing data and the upstream clusters is open. The AGC draft names AGC.
+- How the MaaS policies for external models are enforced in the proxy is open.
+- AFAICT the HTTPRoute, the `ExternalName` Service, the `ServiceEntry`, the `DestinationRule` and the `EnvoyFilter` objects are no longer needed.
+
 ## External models today
 
 An external model is a model at a provider outside the cluster, such as OpenAI or Anthropic. We read how it is modelled and routed in `ai-gateway-controller` (AGC) at [`02aa443`](https://github.com/opendatahub-io/ai-gateway-controller/commit/02aa4430a07c484a76f5dbcb338ebd726fa48863) and in MaaS at [`e0afdbc`](https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be).
@@ -443,15 +641,6 @@ An external model is a model at a provider outside the cluster, such as OpenAI o
 
 - The provider is chosen at random or by weight. There is no failover: the controller ["does not add controller/ExtProc rollout coordination, health-aware selection, or retries"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L61-L63), and the filter ["does not probe upstream health or retry another candidate when a selected upstream fails"](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L224-L225).
 - Praxis never connects to the provider in this setup. It selects the provider, and Envoy forwards the request.
-
-### Who does what, and why
-
-- The user writes the `ExternalProvider`, the `ExternalModel` and the credential Secret, and publishes the model with a `MaaSModelRef`.
-- MaaS writes the `AuthPolicy` and the `TokenRateLimitPolicy` on the route, and takes the status of the `MaaSModelRef` from the route.
-- AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.
-- Kuadrant enforces authentication and token limits in the Gateway.
-- Praxis runs as two `ext_proc` servers. One reads the model name, the other chooses the provider, translates and adds the credential.
-- Envoy, configured by Istio, connects to the provider.
 
 ## Dependencies on Gateway API and Istio
 

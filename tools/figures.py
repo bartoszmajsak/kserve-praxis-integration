@@ -101,6 +101,81 @@ def request_path():
     return f
 
 
+# --- external-models -------------------------------------------------------------
+
+@figure("external-request-path", "Request path of an external model today and with Praxis as the proxy")
+def external_request_path():
+    f = Fig(
+        "f4", 1040, 588,
+        "Request path of an external model, as stacks of layers. Today the request goes through the Istio "
+        "Gateway, where two ext_proc filters call Praxis servers around Kuadrant, an HTTPRoute matches the chosen "
+        "provider, and Envoy connects to the provider with a ServiceEntry and a DestinationRule. With Praxis as "
+        "the proxy, the tenant Gateway forwards to the proxy, which chooses the provider, adds the credential and "
+        "connects to the provider through an upstream cluster.",
+    )
+    W, TW = 476, 452
+    L, R = 16, 548
+
+    # left column: today
+    f.title(L, 20, "TODAY: ENVOY CONNECTS TO THE PROVIDER", "gw")
+    cx = L + W / 2
+    f.plain(cx - 60, 36, 120, 36, "Client")
+    f.edge([(cx, 72), (cx, 104)])
+    f.group(L, 104, W, 340, "Gateway (Envoy, Istio)", "gw")
+    x = L + 12
+    f.tile(x, 128, TW, 54, "ext_proc filter, before Kuadrant", "calls Praxis",
+           ["reads the model name from the request body"], icon="ext")
+    f.tile(x, 190, TW, 54, "Kuadrant", "MaaS writes the policies",
+           ["auth and token limits on the HTTPRoute of the model"], icon="shield")
+    f.tile(x, 252, TW, 54, "ext_proc filter, after Kuadrant", "calls Praxis",
+           ["chooses the provider and adds the credential"], icon="ext")
+    f.tile(x, 314, TW, 54, "HTTPRoute, one per model", "AGC writes it",
+           ["matches the chosen provider, to an ExternalName Service"], icon="route")
+    f.tile(x, 376, TW, 54, "ServiceEntry, DestinationRule", "AGC writes them",
+           ["host, TLS, SNI and CA of the provider"], accent="warn", icon="hex")
+
+    # right column: Praxis as the proxy, following the AGC draft
+    f.title(R, 20, "WITH PRAXIS (DRAFT): THE PROXY CONNECTS TO THE PROVIDER", "px")
+    cx = R + W / 2
+    f.plain(cx - 60, 36, 120, 36, "Client")
+    f.edge([(cx, 72), (cx, 104)])
+    x = R + 12
+    f.tile(x, 104, TW, 54, "Tenant Gateway", "forwards only",
+           ["one route to the proxy of the tenant"], icon="hex")
+    f.edge([(cx, 158), (cx, 190)])
+    f.group(R, 190, W, 278, "Praxis proxy, one per tenant", "px")
+    f.tile(x, 214, TW, 54, "Policy slot", "open for external models",
+           ["auth and token limits"], icon="shield")
+    f.tile(x, 276, TW, 54, "intelligent_route", "writer is open",
+           ["chooses the provider by model name and weight"], icon="route")
+    f.tile(x, 338, TW, 54, "credential_inject, translation", "in-process",
+           ["adds the credential, translates the API format"], icon="ext")
+    f.tile(x, 400, TW, 54, "Upstream cluster, one per provider", "writer is open",
+           ["host, TLS, SNI and CA of the provider"], accent="warn", icon="hex")
+
+    # the piece that moves
+    f.edge([(L + 12 + TW, 403), (520, 403), (520, 427), (R + 12, 427)], accent="warn", dash=True)
+    f.pill(520, 415, "moves", "warn")
+
+    # what is called from the Gateway or the proxy
+    f.edge([(L + 85, 444), (L + 85, 522)], both=True)
+    f.pill(L + 85, 483, "ext_proc")
+    f.tile(L, 522, 200, 54, "Praxis ext_proc", "AGC", ["two servers per tenant"], icon="ext")
+    for x0, top in ((L, 444), (R, 468)):
+        f.edge([(x0 + 348, top), (x0 + 348, 522)])
+        f.pill(x0 + 348, (top + 522) / 2 - 4, "TLS to the provider")
+        f.tile(x0 + 220, 522, 256, 54, "Provider", "outside the cluster",
+               ["such as OpenAI or Anthropic"], icon="pool")
+    f.legend([
+        ("tile", "warn", "connects to the provider"),
+        ("line", "", "request"),
+        ("dash", "warn", "where that moves"),
+        ("group", "", "one proxy and the layers inside it"),
+        (None, "", "label on the right of a tile: who writes it, or its state"),
+    ])
+    return f
+
+
 # --- migration -------------------------------------------------------------------
 
 @figure("migration-stages", "Client request path in the four migration stages")

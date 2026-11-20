@@ -10,6 +10,31 @@ External models are served through objects that exist only on Gateway API and Is
 | With Praxis | The proxy can connect to the provider | Praxis can connect to a provider over TLS, inject its credential and translate some API formats today. Weights work in one filter only, and failover is missing. |
 | Open | Which component writes the routing | The decision covers KServe models. For external models the documents we read name three different writers. |
 
+## Request path
+
+The component that chooses the provider is the same in both setups, a Praxis filter. What changes is which component connects to the provider. Today that is Envoy, with Istio objects for the TLS. With Praxis as the proxy it is an upstream cluster of the proxy.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="figs/external-request-path-dark.svg"><img src="figs/external-request-path.svg" alt="Request path of an external model today and with Praxis as the proxy"></picture>
+
+Today a Praxis `ext_proc` server chooses the provider, and Envoy connects to it. With Praxis as the proxy the same filters run in-process, and the proxy connects to the provider. The right column follows the AGC draft and what Praxis offers today. It is not built.
+
+### Today: who does what, and why
+
+- The user writes the `ExternalProvider`, the `ExternalModel` and the credential Secret, and publishes the model with a `MaaSModelRef`.
+- MaaS writes the `AuthPolicy` and the `TokenRateLimitPolicy` on the route, and takes the status of the `MaaSModelRef` from the route.
+- AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.
+- Kuadrant enforces authentication and token limits in the Gateway.
+- Praxis runs as two `ext_proc` servers. One reads the model name, the other chooses the provider, translates and adds the credential.
+- Envoy, configured by Istio, connects to the provider.
+
+### With Praxis: who does what, and why
+
+- The tenant Gateway forwards to the proxy of the tenant. It no longer carries the routing of a model.
+- Praxis chooses the provider, adds the credential, translates and connects to the provider, all in one process. No `ext_proc` call is involved.
+- Which component writes the routing data and the upstream clusters is open. The AGC draft names AGC.
+- How the MaaS policies for external models are enforced in the proxy is open.
+- AFAICT the HTTPRoute, the `ExternalName` Service, the `ServiceEntry`, the `DestinationRule` and the `EnvoyFilter` objects are no longer needed.
+
 ## External models today
 
 An external model is a model at a provider outside the cluster, such as OpenAI or Anthropic. We read how it is modelled and routed in `ai-gateway-controller` (AGC) at [`02aa443`](https://github.com/opendatahub-io/ai-gateway-controller/commit/02aa4430a07c484a76f5dbcb338ebd726fa48863) and in MaaS at [`e0afdbc`](https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be).
@@ -34,15 +59,6 @@ An external model is a model at a provider outside the cluster, such as OpenAI o
 
 - The provider is chosen at random or by weight. There is no failover: the controller ["does not add controller/ExtProc rollout coordination, health-aware selection, or retries"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L61-L63), and the filter ["does not probe upstream health or retry another candidate when a selected upstream fails"](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L224-L225).
 - Praxis never connects to the provider in this setup. It selects the provider, and Envoy forwards the request.
-
-### Who does what, and why
-
-- The user writes the `ExternalProvider`, the `ExternalModel` and the credential Secret, and publishes the model with a `MaaSModelRef`.
-- MaaS writes the `AuthPolicy` and the `TokenRateLimitPolicy` on the route, and takes the status of the `MaaSModelRef` from the route.
-- AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.
-- Kuadrant enforces authentication and token limits in the Gateway.
-- Praxis runs as two `ext_proc` servers. One reads the model name, the other chooses the provider, translates and adds the credential.
-- Envoy, configured by Istio, connects to the provider.
 
 ## Dependencies on Gateway API and Istio
 
