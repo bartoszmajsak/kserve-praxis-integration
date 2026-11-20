@@ -211,9 +211,7 @@ The table lists the relationships that change between the current setup, the two
 ## Risks
 
 - In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
-- Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target, and how its connection to the EPP is secured is an open question. The alternatives have the same limit until that client is extended.
 - All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
-- The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
 - A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights stay on the service, in `spec.router.route`, and MaaS reads them from the service status. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
@@ -225,7 +223,7 @@ The table lists the relationships that change between the current setup, the two
 | Model Serving (KServe) | | | Publishes complete status for a service without a route and the request paths that go through the EPP, and skips the HTTPRoute for a Gateway that is in front of a Praxis proxy. |
 | Models-as-a-Service (MaaS) | | | Reads the service status in place of the HTTPRoute, writes the routing into the `Proxy` of the tenant and generates the Praxis `Policy`. It has the larger share of the work. |
 | AI Gateway (Praxis) | | | `gateway-controller` renders and deploys the proxy from the `Proxy` and the `Policy`. The EPP client and the policy engine have open work. |
-| Dashboard | | | No change while the service spec keeps `route` and `gateway.refs`. The `HTTPRoute` column and two progress steps disappear. |
+| Dashboard | | | TBD |
 | Users and API clients | | | They keep the objects they write, the hostname and the model IDs. Per-model path URLs stop working. |
 
 ## References

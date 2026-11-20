@@ -42,8 +42,7 @@ STAKEHOLDERS = (
      "Reads the service status in place of the HTTPRoute, writes the routing into the <code>Proxy</code> of the tenant and generates the Praxis <code>Policy</code>. It has the larger share of the work."),
     ("AI Gateway (Praxis)",
      "<code>gateway-controller</code> renders and deploys the proxy from the <code>Proxy</code> and the <code>Policy</code>. The EPP client and the policy engine have open work."),
-    ("Dashboard",
-     "No change while the service spec keeps <code>route</code> and <code>gateway.refs</code>. The <code>HTTPRoute</code> column and two progress steps disappear."),
+    ("Dashboard", "TBD"),
     ("Users and API clients",
      "They keep the objects they write, the hostname and the model IDs. Per-model path URLs stop working."),
 )
