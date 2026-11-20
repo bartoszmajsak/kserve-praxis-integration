@@ -53,7 +53,7 @@ PAGES = (
     ),
     Page(
         "migration",
-        "The stages in which a tenant can move to Praxis, what each stage depends on, what can start "
+        "Work in progress: the stages in which a tenant can move to Praxis, what each stage depends on, what can start "
         "now in MaaS and KServe, and how each stage is rolled back.",
     ),
 )

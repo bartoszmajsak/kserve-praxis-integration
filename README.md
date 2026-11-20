@@ -4,7 +4,7 @@ Three analyses of how a KServe `LLMInferenceService` is served when the data pla
 
 - [Praxis ingress paths](docs/ingress-paths.md) covers how a request reaches the model today and with Praxis, what breaks between MaaS and KServe when the per-model HTTPRoute goes away, and who should own the `ModelProvider`.
 - [Praxis CR relationships](docs/cr-relationships.md) maps which custom resource references which, which one owns which, and which controller writes each, today and in three options for routing a model through Praxis.
-- [Praxis migration](docs/migration.md) describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
+- [Praxis migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
 
 ## Reading
 

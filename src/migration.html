@@ -53,6 +53,7 @@
   a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
   a:hover { text-decoration-color: currentColor; }
   .src { color: var(--muted); font-size: 13px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
   .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
   .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .who ul { font-size: 14.5px; }
@@ -127,6 +128,7 @@
 <header class="prose">
   <div class="eyebrow">Praxis data plane · MaaS and KServe</div>
   <h1>Praxis migration</h1>
+  <p class="warning">The migration scenario is a work in progress and shouldn't be taken seriously yet.</p>
   <p class="lede">A tenant can move from Gateway API on Istio to Praxis in stages, with the tenant Gateway kept as the ingress and no change to what users write. The preparation in MaaS and KServe can start now. The cut-over depends on work in Praxis that is still open.</p>
 </header>
 

@@ -177,7 +177,7 @@ The goal is that users and the dashboard notice nothing. While the route and the
 
 ## Migration
 
-A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in [Praxis migration](migration.md).
+A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in [Praxis migration](migration.md), which is a work in progress.
 
 ## Not verified
 

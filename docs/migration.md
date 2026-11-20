@@ -2,6 +2,9 @@
 
 Praxis data plane, MaaS and KServe.
 
+> [!WARNING]
+> The migration scenario is a work in progress and shouldn't be taken seriously yet.
+
 A tenant can move from Gateway API on Istio to Praxis in stages, with the tenant Gateway kept as the ingress and no change to what users write. The preparation in MaaS and KServe can start now. The cut-over depends on work in Praxis that is still open.
 
 | Topic | Summary | Detail |

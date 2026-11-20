@@ -184,6 +184,8 @@ class Converter:
                 if tag == "h1" and self.eyebrow:
                     out.append(self.eyebrow)
                     self.eyebrow = None
+            elif tag == "p" and "warning" in classes:
+                out.append("> [!WARNING]\n> " + inline(node))
             elif tag == "p" and "src" in classes:
                 continue  # points at notes that are not in the repository
             elif tag in ("p", "figcaption"):
