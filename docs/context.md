@@ -12,11 +12,7 @@ Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `
 
 ## Praxis in the request path
 
-Despite its name, [`gateway-controller`](https://github.com/praxis-proxy/gateway-controller) is not an ingress controller. It configures a Praxis proxy that is deployed behind the platform's existing ingress. According to the proposal, that ingress ("any GWAPI provider, or none") "just forwards to it".
-
-- A Gateway can still be the entry point and forward all traffic to Praxis. The per-model HTTPRoute is removed. Praxis routes on the `model` field of the request body, and "no route is ever written" ([`docs/design/api.md:311`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311)).
-- On `main` ([`f6a1255`](https://github.com/praxis-proxy/gateway-controller/commit/f6a12554d9294130010ed16abea775657914bb6f)) the controller has four status-only reconcilers: `Proxy`, `Policy`, `Tenant`, `AIGateway`. It has no Gateway API dependency, and nothing in it deploys or exposes a proxy yet. The `ModelProvider` API is still an open issue too ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)).
-- The `ModelProvider` API is not settled. The proposal and the design docs in the repository describe different fields, and neither type exists in code.
+[`gateway-controller`](https://github.com/praxis-proxy/gateway-controller) is not an ingress controller (yet?). It configures a Praxis proxy that is deployed behind the platform's existing ingress. Currently, that ingress ("any GWAPI provider, or none") "just forwards to it". A Gateway can still be the entry point and forward all traffic to Praxis. **The per-model HTTPRoute is removed**. Praxis routes on the `model` field of the request body, and ["no route is ever written"](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L311).
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="figs/request-path-dark.svg"><img src="figs/request-path.svg" alt="Request path today and with Praxis"></picture>
 
@@ -39,7 +35,7 @@ Today the per-model routing decision is an HTTPRoute on the Gateway. KServe writ
 
 ## Problems in today's integration
 
-MaaS and KServe integrate through the HTTPRoute today. MaaS looks up the route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while a route exists. Praxis removes the per-model route, so the move exposes the items below. Each of them needs a solution before a service can be served through Praxis.
+Currently, MaaS and KServe integrate through the HTTPRoute and not through a defined contract. MaaS looks up the route, attaches its policies to it and derives the tenant from it. KServe publishes the status MaaS needs only while a route exists. Praxis removes the route, so the items below have to be fixed before a service can be served through Praxis.
 
 ### Between MaaS and KServe
 
@@ -61,7 +57,7 @@ The migration also depends on work in Praxis that is still open. It is outside o
 |---|---|---|
 | The EPP client does not cover the endpoint picker protocol. | It rejects the EPP's list of fallback endpoints, never reports which pod served the request and does not send response bodies to the EPP. AFAICT it has no TLS. It is off in published builds. No issue tracks any of this, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed. | File the issues under [`gateway-controller#24`](https://github.com/praxis-proxy/gateway-controller/issues/24), and test against the real EPP with KServe's presets. |
 | The policy engine cannot replace Kuadrant for MaaS yet. | No Kubernetes token auth ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213)), no limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352)), counters per replica ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)), and the FIPS image is built without the policy filter. The MaaS team's own POC lists these. | Track those four, and decide whether token limits are enforced by the policy engine or by the `token_rate_limit` filter. |
-| The control plane is not built. | `gateway-controller` has no `ModelProvider` type and does not render or deploy a proxy yet ([`#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17), [`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). | No action on our side. Track it. The [`v1.0.0` milestone](https://github.com/praxis-proxy/gateway-controller/milestone/1) is due 2027-01-20. |
+| The control plane is not built. | On `main` at [`f6a1255`](https://github.com/praxis-proxy/gateway-controller/commit/f6a12554d9294130010ed16abea775657914bb6f), `gateway-controller` has four status-only reconcilers and no Gateway API dependency. It has no `ModelProvider` type and does not render or deploy a proxy yet ([`#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17), [`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)). | No action on our side. Track it. The [`v1.0.0` milestone](https://github.com/praxis-proxy/gateway-controller/milestone/1) is due 2027-01-20. |
 
 ## Gateway API support in Praxis
 

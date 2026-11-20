@@ -849,7 +849,7 @@ The figures use the same three columns, one per namespace, and the same marks.
 
 The HTTPRoute is the central object today. KServe creates it, the tenant Gateway admits it, and MaaS both reads it and attaches a policy to it. As a result, objects written by MaaS depend on an object that KServe owns.
 
-![Custom resources today, on Gateway API with Kuadrant](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-today.svg)
+![Custom resources today, on Gateway API with Kuadrant](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/relationships-today.png)
 
 The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRoute that KServe creates. `MaaSModelRef` takes its status from the same route.
 
@@ -870,7 +870,7 @@ The per-model `TokenRateLimitPolicy` is written by MaaS and owned by the HTTPRou
 
 Option 1 replaces the per-model HTTPRoute with a `ModelProvider` that KServe creates in the tenant namespace. MaaS completes the object by setting `status.proxyRef`, and `gateway-controller` renders the routing from it.
 
-![Custom resources in option 1, where KServe creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-option-1.svg)
+![Custom resources in option 1, where KServe creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/relationships-option-1.png)
 
 The `ModelProvider` is the only object in the tenant namespace that MaaS does not create. It has three writers: KServe for the spec, MaaS for `status.proxyRef`, and `gateway-controller` for readiness.
 
@@ -894,7 +894,7 @@ The `ModelProvider` is the only object in the tenant namespace that MaaS does no
 
 In option 2 KServe publishes the backend in the `LLMInferenceService` status, and MaaS creates a `ModelProvider` for each `MaaSModelRef`. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace. It needs the `ModelProvider` API, which is open with no milestone ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)), so it is not preferred now. The preferred option uses the same contract with KServe and reaches this state when the API is adopted.
 
-![Custom resources in option 2, where MaaS creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/relationships-option-2.svg)
+![Custom resources in option 2, where MaaS creates the ModelProvider](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/relationships-option-2.png)
 
 MaaS writes every object in the tenant namespace, and KServe writes only next to the service. The one relationship that still crosses namespaces is the reference from the provider to its backend.
 

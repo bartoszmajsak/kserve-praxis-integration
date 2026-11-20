@@ -582,7 +582,7 @@ A tenant can move from Gateway API on Istio to Praxis in stages, with the tenant
 
 We looked for a sequence in which clients keep the hostname, the request URL and the model ID they use today. That requires the tenant Gateway to stay in front of the Praxis proxy, with one route that forwards model requests to it. On that Gateway the per-model HTTPRoute and the forwarding route do not share traffic. The per-model rules are more specific, so the requests for a model reach Praxis only after its HTTPRoute is removed. The four stages follow from that.
 
-![Client request path in the four migration stages](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/migration-stages.svg)
+![Client request path in the four migration stages](https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/figs/png/migration-stages.png)
 
 The path of a client request in each stage. In stages 1 and 2 the per-model HTTPRoute serves every request. From stage 3 the forwarding route sends model requests to the Praxis proxy of the tenant. The EPP and the pods are the same in all four.
 

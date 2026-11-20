@@ -6,6 +6,7 @@ How a KServe `LLMInferenceService` is served when the data plane moves from Gate
 - [Alternatives](docs/alternatives.md) describes the options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.
 - [Context](docs/context.md) covers how a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.
 - [Migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
+- [Doc edition](docs/doc-edition.md) is the decision as one document, for pasting into a doc. The build composes it from the pages. It leaves out the code references, the state of Praxis, the alternatives and the migration.
 
 ## Reading
 
@@ -21,7 +22,9 @@ You need Python 3 and `make`. The build uses the standard library only and no ne
 
 `make build` regenerates everything under `docs/` and `site/` from `src/` and `tools/`. Both directories are committed, so edit `src/` or `tools/`, run `make build` and commit the result with your change.
 
-`make check` builds into a temporary directory and fails if the committed `docs/` or `site/` differ from it. CI runs it on every push and pull request.
+`make png` renders the light figures to `docs/figs/png/`, for places that do not take SVG. It needs `rsvg-convert`, so run it after a figure changed and commit the result.
+
+`make check` builds into a temporary directory and fails if the committed `docs/` or `site/` differ from it, or if a PNG was rendered from an older version of its figure. CI runs it on every push and pull request.
 
 `make build` also writes `build/artifact/<page>.html`, which is not committed. It is the page source with the stylesheet and the figures inlined, in the fragment format of the hosting tool that the pages are published to as well.
 
@@ -37,6 +40,8 @@ tools/figures.py      the figures, one function each
 tools/figkit.py       drawing primitives for the figures
 tools/themes.py       light and dark colours of the standalone figures
 tools/html2md.py      HTML to Markdown converter
+tools/edition.py      composes the doc edition from sections of the pages
+tools/png.py          renders the PNG figures and checks that they are current
 tools/site_html.py    standalone HTML documents, navigation, theme switch and Markdown view
 tools/errors.py       the error a failed build check raises
 docs/                 generated Markdown, with the figures as SVG in docs/figs/

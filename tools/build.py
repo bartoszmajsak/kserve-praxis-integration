@@ -6,8 +6,11 @@ Usage: build.py [--out DIR]
 Writes, under DIR (the repository root by default):
   docs/NAME.md               the page as GitHub-flavoured Markdown
   docs/figs/FIG[-dark].svg   every figure as a standalone file, light and dark
+  docs/doc-edition.md        the decision as one document, composed from the pages
   site/NAME.html, index.html standalone HTML documents, each with a Markdown view
   build/artifact/NAME.html   the page with the stylesheet and its figures inlined, for the host
+
+`docs/figs/png/` is not written here. `tools/png.py` renders it, and the build leaves it alone.
 
 A page that was renamed keeps its old address: `site/OLD.html` forwards to the new page
 and `docs/OLD.md` points at it.
@@ -22,6 +25,7 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
+import edition
 import html2md
 import site_html
 import themes
@@ -30,6 +34,7 @@ from figures import FIGURES
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERATED = ("docs", "site", "build/artifact")
+KEPT = "docs/figs/png/"  # rendered by tools/png.py
 STYLE = "src/style.css"
 
 SITE_TITLE = "KServe and Praxis integration"
@@ -122,11 +127,11 @@ def check_classes(page, figs, css):
 
 
 def portable(markdown):
-    """The Markdown of a page for pasting somewhere else: figures as plain images and
-    links to other pages with their full address."""
+    """The Markdown of a page for pasting somewhere else: figures as plain PNG images,
+    which more places take than SVG, and links to other pages with their full address."""
     markdown = re.sub(
-        r'<picture><source [^>]*><img src="(figs/[^"]+)" alt="([^"]*)"></picture>',
-        lambda m: f"![{html.unescape(m.group(2))}]({RAW_URL}{m.group(1)})",
+        r'<picture><source [^>]*><img src="figs/([^"]+)\.svg" alt="([^"]*)"></picture>',
+        lambda m: f"![{html.unescape(m.group(2))}]({RAW_URL}figs/png/{m.group(1)}.png)",
         markdown,
     )
     return re.sub(r"\]\(([a-z0-9-]+)\.md\)", lambda m: f"]({SITE_URL}{m.group(1)}.html)", markdown)
@@ -188,6 +193,7 @@ def render():
     fonts = sources[PAGES[0].name].font_links
     layout = css[:css.index(themes.MARKS)].rstrip() + "\n"
     entries = [(f"{p.name}.html", sources[p.name].title, p.description) for p in PAGES]
+    entries.append((f"{edition.NAME}.html", edition.LABEL, edition.DESCRIPTION))
     out["site/index.html"] = site_html.document(
         SITE_TITLE, SITE_LEDE, fonts, layout,
         site_html.index_body(SITE_TITLE, SITE_LEDE, entries), links, "index.html",
@@ -198,13 +204,29 @@ def render():
         title = sources[new].title
         out[f"site/{old}.html"] = site_html.redirect(f"{new}.html", title)
         out[f"docs/{old}.md"] = f"# Moved\n\nThe content is now in [{title}]({new}.md).\n"
+
+    # The doc edition is composed from the pages, so their figures appear in it a second time.
+    # It is listed on the index and not in the navigation.
+    source = edition.compose({name: src.body for name, src in sources.items()})
+    figs = {name: FIGURES[name].build() for _, name in PLACEHOLDER.findall(source)}
+    try:
+        markdown = html2md.convert(source, {name: FIGURES[name].alt for name in figs})
+    except BuildError as error:
+        raise BuildError(f"{edition.NAME}: {error}") from None
+    out[f"docs/{edition.NAME}.md"] = markdown
+    out[f"site/{edition.NAME}.html"] = site_html.document(
+        f"{edition.TITLE} - {SITE_TITLE}", edition.DESCRIPTION, fonts, css,
+        PLACEHOLDER.sub(lambda m: figs[m.group(2)].inline(m.group(1)), source),
+        links, f"{edition.NAME}.html", markdown=portable(markdown),
+    )
     return out
 
 
 def write(root, files):
     for directory in GENERATED:
         for path in sorted((root / directory).rglob("*")):
-            if path.is_file() and path.relative_to(root).as_posix() not in files:
+            name = path.relative_to(root).as_posix()
+            if path.is_file() and name not in files and not name.startswith(KEPT):
                 path.unlink()
     for name, content in files.items():
         path = root / name

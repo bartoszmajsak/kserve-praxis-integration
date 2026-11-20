@@ -40,7 +40,7 @@ We took the goals from what users, clients and the two controllers must not lose
 
 ## Decision
 
-We keep `MaaSModelRef` as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and `Ready`, with or without a route. MaaS reads that status and writes the routing of each published model into the `Proxy` of the tenant, next to the policy slot, and `gateway-controller` renders it. No `ModelProvider` is created.
+We propose to keep `MaaSModelRef` as the only object a user writes to publish a model. KServe publishes what it already knows about the service in its status: the backend, the port, the served model names and `Ready`, with or without a route. MaaS reads that status and writes the routing of each published model into the `Proxy` of the tenant, next to the policy slot, and `gateway-controller` renders it. No `ModelProvider` is created.
 
 The status also has to say which request paths go through the EPP and which go to the workload Service directly. That split is only defined in the HTTPRoute today, and the routing MaaS writes needs both kinds of entries.
 
@@ -57,14 +57,13 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 
 ## Benefits
 
-- One contract between MaaS and KServe: the `LLMInferenceService` status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.
-- One writer per object. MaaS writes every object in the tenant namespace, and KServe writes only next to the service.
-- Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.
-- No dependency on the `ModelProvider` API. It is open with no milestone, and this option needs the `Proxy` and the `Policy` only.
-- Nothing changes in what users and the dashboard write. `MaaSModelRef` needs no new spec field.
-- Several tenants per service need no extra API. One service can be published to several tenants today, with one `MaaSModelRef` each.
-- The `ModelProvider` can be adopted later without a change for users or for KServe, because the contract with KServe and the user-facing objects stay the same.
-- It follows existing practice. MaaS already reads `status.router.scheduler.inferencePool` and writes an `InferenceObjective` per pool.
+- **One contract between MaaS and KServe**: the `LLMInferenceService` status. MaaS no longer depends on the HTTPRoute, its labels, its parent Gateway or its hostnames.
+- **One writer per object.** MaaS writes every object in the tenant namespace, and KServe writes only next to the service.
+- **Dependencies in one direction.** KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.
+- **No dependency on the `ModelProvider` API.** It is open with no milestone, and this option needs the `Proxy` and the `Policy` only.
+- **Nothing changes in what users and the dashboard write.** `MaaSModelRef` needs no new spec field.
+- **Several tenants per service need no extra API.** One service can be published to several tenants today, with one `MaaSModelRef` each.
+- **Adopting the `ModelProvider` later needs no change for users or for KServe.** The contract with KServe and the user-facing objects stay the same.
 
 ## Costs and limits
 
@@ -73,7 +72,7 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 - All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
 - The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
 - A service without a `MaaSModelRef` has no routing entry, so non-MaaS services remain on Gateway API with Kuadrant.
-- Stopping or deleting a service removes its pool and its Service immediately. MaaS has to remove the routing entry at the same time.
+- When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights need an owner. They are either read from `group` and `weight` on the service, or defined in MaaS. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
 
 ## Adopting the ModelProvider later
