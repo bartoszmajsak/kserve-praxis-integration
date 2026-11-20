@@ -1,4 +1,4 @@
-# ODH-ADR-MS-XXXX: Routing KServe models through Praxis
+# Routing KServe models through Praxis
 
 | | |
 |---|---|

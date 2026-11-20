@@ -13,7 +13,7 @@ from errors import require
 
 NAME = "doc-edition"
 LABEL = "Doc edition"
-TITLE = "ODH-ADR-MS-XXXX: Routing KServe models through Praxis"
+TITLE = "Routing KServe models through Praxis"
 DESCRIPTION = (
     "The decision in the format of an Open Data Hub architecture decision record, for pasting into a doc. "
     "It leaves out the code references, the state of Praxis and the migration."
