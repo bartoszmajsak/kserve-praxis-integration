@@ -1,0 +1,305 @@
+<title>Praxis CR relationships</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: one reading column; each figure is a three-lane map (tenant, model, gateway) in its own scroller. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --canvas: #eef1f5;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a relationship listed as a problem */
+    --code-bg: #e9edf2;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --canvas: #121920; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --ks: #78aef0; --maas: #4ecba6; --gc: #b79cf2; --agc: #e0b040;
+      --warn: #ff8a80; --code-bg: #202a35; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --canvas: #121920; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --ks: #78aef0; --maas: #4ecba6; --gc: #b79cf2; --agc: #e0b040;
+    --warn: #ff8a80; --code-bg: #202a35; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul { margin: 0; }
+  ul { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 920px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  tbody th { font-weight: 600; width: 16%; }
+
+  /* diagram marks: tiles with a header strip, dashed lanes with a tab, ownership rails, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.ks { stroke: var(--ks); stroke-width: 1.6; }
+  .d-tile-b.maas { stroke: var(--maas); stroke-width: 1.6; }
+  .d-tile-b.gc { stroke: var(--gc); stroke-width: 1.6; }
+  .d-tile-b.agc { stroke: var(--agc); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.ks { fill: color-mix(in srgb, var(--ks) 13%, var(--panel)); }
+  .d-head.maas { fill: color-mix(in srgb, var(--maas) 13%, var(--panel)); }
+  .d-head.gc { fill: color-mix(in srgb, var(--gc) 13%, var(--panel)); }
+  .d-head.agc { fill: color-mix(in srgb, var(--agc) 15%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.ks { fill: var(--ks); } .d-kind.maas { fill: var(--maas); }
+  .d-kind.gc { fill: var(--gc); } .d-kind.agc { fill: var(--agc); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-tab { fill: var(--line-strong); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.maas { stroke: var(--maas); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.maas { fill: var(--maas); }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.maas { stroke: var(--maas); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.maas { fill: var(--maas); }
+  .d-rail { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .d-rail.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+</style>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Praxis data plane · MaaS and KServe</div>
+  <h1>Custom resources, references and owners</h1>
+  <p class="lede">Serving a KServe model through MaaS involves custom resources written by several controllers. The figures show which object references which, which object owns which, and which controller writes each object, in four setups: the current one on Gateway API, option 1 where KServe creates the <code>ModelProvider</code>, option 2 where MaaS creates it, and option 3 where MaaS writes the routing and the <code>ModelProvider</code> comes later.</p>
+</header>
+
+<section>
+  <div class="prose">
+    <h2>Reading the figures</h2>
+    <p>All four figures use the same three columns, one per namespace, and the same marks.</p>
+  </div>
+  <ul class="legend">
+    <li><span class="chips"><span class="chip"></span><span class="chip ks"></span><span class="chip maas"></span><span class="chip gc"></span><span class="chip agc"></span></span><span>The colour of a tile and the label in its header name who writes the object: a user or an admin, KServe, MaaS, <code>gateway-controller</code>, or the AI Gateway controller (AGC).</span></li>
+    <li><span class="stroke rail"></span><span>A tile indented under another is owned by it through an <code>ownerReference</code>.</span></li>
+    <li><span class="stroke"></span><span>A solid arrow is a reference held in a field. It points from the object that holds the field.</span></li>
+    <li><span class="stroke dash"></span><span>A dashed arrow is an action of a controller with no reference between the two objects.</span></li>
+    <li><span class="stroke warn"></span><span>Red marks a relationship that is listed under the figure as a problem.</span></li>
+  </ul>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Today: Gateway API with Kuadrant</h2>
+    <p>The HTTPRoute is the central object today. KServe creates it, the tenant Gateway admits it, and MaaS both reads it and attaches a policy to it. As a result, objects written by MaaS depend on an object that KServe owns.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <!-- figure: relationships-today -->
+    </div>
+    <figcaption>The per-model <code>TokenRateLimitPolicy</code> is written by MaaS and owned by the HTTPRoute that KServe creates. <code>MaaSModelRef</code> takes its status from the same route.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the HTTPRoute, the <code>InferencePool</code>, the EPP and the workload, and owns all of them through the <code>LLMInferenceService</code>. It derives <code>Ready</code> and the URL from the status Istio writes on the route and the pool.</li>
+          <li>MaaS reads the HTTPRoute and the service status to set the status of a <code>MaaSModelRef</code>. From a <code>MaaSAuthPolicy</code> it creates one <code>AuthPolicy</code> on the Gateway. From a <code>MaaSSubscription</code> it creates one <code>TokenRateLimitPolicy</code> per model, with the HTTPRoute as target and owner, and an <code>InferenceObjective</code> per pool.</li>
+          <li>AGC deploys <code>praxis-extproc</code> and its <code>EnvoyFilter</code> for the Gateway named in <code>AITenant.status.gatewayRef</code>.</li>
+          <li>Istio implements the Gateway and writes route and pool status. Kuadrant enforces the <code>AuthPolicy</code> and the rate limit policies.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Relationships that cause problems</h3>
+        <ul>
+          <li>A MaaS policy is owned by a KServe object. Deleting the HTTPRoute deletes the per-model rate limit.</li>
+          <li>MaaS depends on the HTTPRoute, which is an implementation detail of KServe, and not on the <code>LLMInferenceService</code> status.</li>
+          <li>The tenant is bound to a Gateway. An <code>AITenant</code> fails without one, and when <code>tenantRef</code> is empty the tenant of a model is looked up from the route's parent Gateway.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Option 1: KServe creates the ModelProvider</h2>
+    <p>Option 1 replaces the per-model HTTPRoute with a <code>ModelProvider</code> that KServe creates in the tenant namespace. MaaS completes the object by setting <code>status.proxyRef</code>, and <code>gateway-controller</code> renders the routing from it.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <!-- figure: relationships-option-1 -->
+    </div>
+    <figcaption>The <code>ModelProvider</code> is the only object in the tenant namespace that MaaS does not create. It has three writers: KServe for the spec, MaaS for <code>status.proxyRef</code>, and <code>gateway-controller</code> for readiness.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the pool, the EPP and the workload as today, and one <code>ModelProvider</code> per service in the tenant namespace. It sets the tenant, the pool and the weight, and changes the weight during a canary.</li>
+          <li>MaaS creates the <code>Proxy</code> and the <code>Policy</code>, maps the <code>AITenant</code> to the <code>Proxy</code>, and sets <code>status.proxyRef</code> on each provider so that <code>gateway-controller</code> does not have to read the <code>AITenant</code>.</li>
+          <li><code>gateway-controller</code> reads the <code>Proxy</code>, the <code>Policy</code> and the providers. It deploys the Praxis proxy, writes the routing config grouped by <code>publishedName</code>, and writes readiness on the provider.</li>
+          <li>The platform ingress forwards all traffic to the Praxis Service.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Relationships that cause problems</h3>
+        <ul>
+          <li>KServe writes into a namespace it does not manage. An <code>ownerReference</code> cannot cross namespaces, so nothing ties the lifetime of the provider to the service.</li>
+          <li>KServe has no tenant. An <code>LLMInferenceService</code> has no tenant field, and resolving the tenant "through gatewayRef" requires a Gateway.</li>
+          <li>One object has three writers, and two of them write its status.</li>
+          <li><code>MaaSModelRef</code>, <code>MaaSSubscription</code> and <code>MaaSAuthPolicy</code> have no defined role. One service can be published to several tenants today, which a single <code>aiTenantRef</code> cannot express.</li>
+          <li><code>inferencePoolRef</code> holds only a name, while the pool is in another namespace.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Option 2: MaaS creates the ModelProvider</h2>
+    <p>In option 2 KServe publishes the backend in the <code>LLMInferenceService</code> status, and MaaS creates a <code>ModelProvider</code> for each <code>MaaSModelRef</code>. Every object in the tenant namespace then has one writer, and KServe writes only in the model namespace.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <!-- figure: relationships-option-2 -->
+    </div>
+    <figcaption>MaaS writes every object in the tenant namespace, and KServe writes only next to the service. The one relationship that still crosses namespaces is the reference from the provider to its backend.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe creates the pool, the EPP and the workload, and publishes the backend, the port, the served model names and <code>Ready</code> in status. It creates nothing in the tenant namespace and needs no tenant.</li>
+          <li>MaaS reads that status. For each <code>MaaSModelRef</code> it creates a <code>ModelProvider</code>, with the tenant taken from <code>spec.tenantRef</code>, and removes it through the cleanup finalizer it already has on <code>MaaSModelRef</code>. It creates the <code>Proxy</code> and the <code>Policy</code> from the tenant, the subscriptions and the auth policies.</li>
+          <li><code>gateway-controller</code> does the same as in option 1, and no longer shares the status of the provider with MaaS.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Open points</h3>
+        <ul>
+          <li>The provider references a backend in another namespace. The Praxis design leaves that access to NetworkPolicy and admission policy.</li>
+          <li>No <code>ownerReference</code> links a <code>MaaSModelRef</code> to its provider either, because they are in different namespaces. The finalizer covers deletion.</li>
+          <li>When a service is stopped or deleted, KServe removes the pool and the Service immediately, but the provider stays in the Praxis configuration until MaaS removes it.</li>
+          <li>Canary weights need an owner: they are either copied from the service or defined in MaaS.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Option 3: MaaSModelRef only, ModelProvider later</h2>
+    <p>Option 3 is option 2 without the <code>ModelProvider</code>. MaaS writes the routing of each <code>MaaSModelRef</code> directly into the <code>Proxy</code> of the tenant, and <code>gateway-controller</code> renders it. The <code>ModelProvider</code> API can be adopted later without a change for users or for KServe.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+      <!-- figure: relationships-option-3 -->
+    </div>
+    <figcaption>No object represents the routing of a single model. It is part of the <code>Proxy</code>, which MaaS already writes.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>KServe does the same as in option 2. It publishes the backend, the port, the served model names and <code>Ready</code> in status.</li>
+          <li>MaaS reads that status and writes the routing of every published model of a tenant into the tenant's <code>Proxy</code>, next to the policy slot. The proposal allows this: when the routing slot is not delegated, "routing stays MaaS-defined".</li>
+          <li><code>gateway-controller</code> renders the <code>Proxy</code> and the <code>Policy</code>. It does not need the <code>ModelProvider</code> type, which is not implemented yet (<code>#40</code>, <code>#42</code>).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Limits</h3>
+        <ul>
+          <li>A routing change restarts the proxy pods. A <code>Proxy</code> has no field for a mounted routing file, and the draft that renders the proxy (<code>gateway-controller#82</code>) mounts its configuration in a way that rolls the pods on every change.</li>
+          <li>Today it covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. Options 1 and 2 have the same limit until that client is extended.</li>
+          <li>All models of a tenant are in one object, so every publish and unpublish is a write to the same <code>Proxy</code>.</li>
+          <li>The routing renderer in MaaS is discarded when the <code>ModelProvider</code> arrives. MaaS then creates one provider per <code>MaaSModelRef</code>, which is option 2.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Comparison</h2>
+    <p>The table lists the relationships that change between the four setups.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Relationship</th><th>Today</th><th>Option 1</th><th>Option 2</th><th>Option 3</th></tr></thead>
+      <tbody>
+        <tr><th>Routing entry for a model</th><td>HTTPRoute, created by KServe</td><td><code>ModelProvider</code>, created by KServe</td><td><code>ModelProvider</code>, created by MaaS</td><td>Routing inline in the tenant's <code>Proxy</code>, written by MaaS</td></tr>
+        <tr><th>Its owner</th><td><code>LLMInferenceService</code>, through an <code>ownerReference</code></td><td>None. The service is in another namespace</td><td>MaaS, through the finalizer on <code>MaaSModelRef</code></td><td>The <code>Proxy</code>, which MaaS owns</td></tr>
+        <tr><th>Its writers</th><td>KServe for the spec, Istio for the status</td><td>KServe for the spec, MaaS and <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td><td>MaaS for the spec, <code>gateway-controller</code> for the status</td></tr>
+        <tr><th>Source of the tenant</th><td><code>MaaSModelRef.spec.tenantRef</code>, or the route's parent Gateway</td><td>A lookup "through gatewayRef" from the service, not defined</td><td><code>MaaSModelRef.spec.tenantRef</code></td><td><code>MaaSModelRef.spec.tenantRef</code></td></tr>
+        <tr><th>What MaaS reads from KServe</th><td>The HTTPRoute and the service status</td><td>Not specified</td><td>The service status only</td><td>The service status only</td></tr>
+        <tr><th>What KServe has to know</th><td>The tenant Gateway</td><td>The tenant, and the Praxis <code>ModelProvider</code> type</td><td>Nothing new</td><td>Nothing new</td></tr>
+        <tr><th>Per-model token limit</th><td><code>TokenRateLimitPolicy</code> owned by the HTTPRoute</td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td><td>Rules in the <code>Policy</code></td></tr>
+        <tr><th>Writes outside the writer's own namespaces</th><td>MaaS writes policies into the model and the gateway namespaces</td><td>KServe writes the provider into the tenant namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td><td>MaaS writes the <code>InferenceObjective</code> into the model namespace</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The current setup is read from the MaaS, KServe and AGC code. The two options describe objects that do not exist yet.</p>
+    <ul>
+      <li>Option 1 follows the proposal draft dated 2026-11-19. <code>Proxy</code> and <code>Policy</code> exist as types in <code>gateway-controller</code>, and <code>ModelProvider</code> does not.</li>
+      <li>The namespaces of the Praxis objects follow the example in the proposal, which places them in the tenant namespace.</li>
+      <li>In option 2, removing the provider through the existing finalizer on <code>MaaSModelRef</code> is new code. The finalizer and its cleanup hook exist.</li>
+      <li>Whether an <code>InferenceObjective</code> has an owner was not checked.</li>
+      <li>Option 3 relies on the proposal's remark that routing stays MaaS-defined when the routing slot is not delegated. What an inline filter chain in a <code>Proxy</code> can express was read from the types, and nothing renders it yet.</li>
+      <li>None of this was run on a cluster.</li>
+    </ul>
+  </div>
+</section>
+
+</div>

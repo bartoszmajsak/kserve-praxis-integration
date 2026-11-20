@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KServe and Praxis integration</title>
+<meta name="description" content="What changes for a KServe LLMInferenceService when the MaaS data plane moves from Gateway API on Istio to Praxis.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column, figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --warn: #b0401c;    /* the contested or moved piece */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .theme { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .theme label { position: relative; display: block; }
+  .theme input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .theme span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .theme input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .theme input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html" aria-current="page">Overview</a>
+    <a href="ingress-paths.html">Praxis ingress paths</a>
+    <a href="cr-relationships.html">Praxis CR relationships</a>
+  </nav>
+  <div class="theme" role="radiogroup" aria-label="Theme" hidden>
+    <label><input type="radio" name="theme" value="system"><span>System</span></label>
+    <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <h1>KServe and Praxis integration</h1>
+  <p class="lede">What changes for a KServe <code>LLMInferenceService</code> when the MaaS data plane moves from Gateway API on Istio to Praxis.</p>
+</header>
+
+<section class="pages">
+  <div class="prose">
+    <h2><a href="ingress-paths.html">Praxis ingress paths</a></h2>
+    <p>How a request reaches the model today and with Praxis, what breaks between MaaS and KServe when the per-model HTTPRoute goes away, and who should own the <code>ModelProvider</code>.</p>
+  </div>
+  <div class="prose">
+    <h2><a href="cr-relationships.html">Praxis CR relationships</a></h2>
+    <p>Which custom resource references which, which one owns which, and which controller writes each, today and in three options for routing a model through Praxis.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>

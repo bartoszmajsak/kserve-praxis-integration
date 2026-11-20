@@ -1,0 +1,183 @@
+<svg viewBox="0 0 1040 574" role="img" aria-label="Custom resources in option 2. KServe writes only in the model namespace and publishes the backend in the LLMInferenceService status. MaaS creates the ModelProvider for each MaaSModelRef in the tenant namespace, next to the Proxy and the Policy. The provider references its backend in the model namespace." xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="r3-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="r3-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="r3-ah-maas" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah maas" d="M0 0 L10 5 L0 10 z"/></marker>
+<filter id="r3-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+</defs>
+<style>
+.d-tile { fill: #161d25; }
+.d-tile-b { fill: none; stroke: #6b7a8b; stroke-width: 1.2; }
+.d-tile-b.ks { stroke: #78aef0; stroke-width: 1.6; }
+.d-tile-b.maas { stroke: #4ecba6; stroke-width: 1.6; }
+.d-tile-b.gc { stroke: #b79cf2; stroke-width: 1.6; }
+.d-tile-b.agc { stroke: #e0b040; stroke-width: 1.6; }
+.d-head { fill: #202a35; }
+.d-head.ks { fill: #23303f; }
+.d-head.maas { fill: #1d3436; }
+.d-head.gc { fill: #2b2e40; }
+.d-head.agc { fill: #343329; }
+.d-kind { fill: #e5eaf0; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12.5px; font-weight: 600; }
+.d-kind.ks { fill: #78aef0; } .d-kind.maas { fill: #4ecba6; }
+.d-kind.gc { fill: #b79cf2; } .d-kind.agc { fill: #e0b040; }
+.d-own { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; }
+.d-grp { fill: #1b232b; stroke: #6b7a8b; stroke-width: 1.2; stroke-dasharray: 7 4; }
+.d-tab { fill: #6b7a8b; }
+.d-tabt { fill: #161d25; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 600; }
+.d-pill { fill: #161d25; stroke: #2a3541; stroke-width: 1; }
+.d-pill.warn { stroke: #ff8a80; } .d-pill.maas { stroke: #4ecba6; }
+.d-pillt { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; font-weight: 500; }
+.d-pillt.warn { fill: #ff8a80; } .d-pillt.maas { fill: #4ecba6; }
+.d-s { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; }
+.d-edge { stroke: #e5eaf0; stroke-width: 1.3; fill: none; }
+.d-edge.warn { stroke: #ff8a80; stroke-width: 2; }
+.d-edge.maas { stroke: #4ecba6; stroke-width: 2; }
+.d-edge.dash { stroke-dasharray: 5 4; }
+.d-ah { fill: #e5eaf0; } .d-ah.warn { fill: #ff8a80; } .d-ah.maas { fill: #4ecba6; }
+.d-rail { stroke: #6b7a8b; stroke-width: 1.5; fill: none; }
+.d-rail.warn { stroke: #ff8a80; stroke-width: 2; }
+.d-legend { fill: #161d25; stroke: #2a3541; stroke-width: 1; }
+.d-lg { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; }
+</style>
+<rect width="1040" height="574" fill="#0d1117"/>
+<rect class="d-grp " x="774" y="54" width="250" height="232" rx="12"/>
+<rect class="d-grp " x="395" y="54" width="250" height="372" rx="12"/>
+<rect class="d-grp " x="16" y="54" width="250" height="434" rx="12"/>
+<line class="d-rail " x1="414.0" y1="226" x2="414.0" y2="323.0"/>
+<line class="d-rail " x1="414.0" y1="261.0" x2="421" y2="261.0"/>
+<line class="d-rail " x1="414.0" y1="323.0" x2="421" y2="323.0"/>
+<polyline class="d-edge " points="407,92 254,92" marker-end="url(#r3-ah)"/>
+<polyline class="d-edge " points="254,167.0 292,167.0"/>
+<polyline class="d-edge " points="254,229.0 292,229.0 292,116 407,116" marker-end="url(#r3-ah)"/>
+<polyline class="d-edge maas dash" points="407,140 320,140 320,420 254,420" marker-end="url(#r3-ah-maas)"/>
+<polyline class="d-edge " points="254,456 374,456 374,261.0 421,261.0" marker-end="url(#r3-ah)"/>
+<polyline class="d-edge  dash" points="786,167.0 710,167.0 710,269.0 633,269.0" marker-end="url(#r3-ah)"/>
+<rect class="d-tile" x="28" y="78" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H246Q253.4 78.6 253.4 86V102Z"/>
+<rect class="d-tile-b " x="28" y="78" width="226" height="54" rx="8"/>
+<text class="d-kind " x="40" y="94.5">AITenant</text>
+<text class="d-own" x="244" y="94" text-anchor="end">platform admin</text>
+<text class="d-s" x="40" y="120">maps the tenant to its Proxy</text>
+<rect class="d-tile" x="28" y="140" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M28.6 164V148Q28.6 140.6 36 140.6H246Q253.4 140.6 253.4 148V164Z"/>
+<rect class="d-tile-b " x="28" y="140" width="226" height="54" rx="8"/>
+<text class="d-kind " x="40" y="156.5">MaaSSubscription</text>
+<text class="d-own" x="244" y="156" text-anchor="end">admin</text>
+<text class="d-s" x="40" y="182">token limits per model</text>
+<rect class="d-tile" x="28" y="202" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M28.6 226V210Q28.6 202.6 36 202.6H246Q253.4 202.6 253.4 210V226Z"/>
+<rect class="d-tile-b " x="28" y="202" width="226" height="54" rx="8"/>
+<text class="d-kind " x="40" y="218.5">MaaSAuthPolicy</text>
+<text class="d-own" x="244" y="218" text-anchor="end">admin</text>
+<text class="d-s" x="40" y="244">who may call which model</text>
+<rect class="d-tile" x="28" y="264" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head maas" d="M28.6 288V272Q28.6 264.6 36 264.6H246Q253.4 264.6 253.4 272V288Z"/>
+<rect class="d-tile-b maas" x="28" y="264" width="226" height="70" rx="8"/>
+<text class="d-kind maas" x="40" y="280.5">Proxy</text>
+<text class="d-own" x="244" y="280" text-anchor="end">MaaS</text>
+<text class="d-s" x="40" y="306">policy slot: the Policy</text>
+<text class="d-s" x="40" y="322">routing slot: gateway-controller</text>
+<rect class="d-tile" x="28" y="342" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head maas" d="M28.6 366V350Q28.6 342.6 36 342.6H246Q253.4 342.6 253.4 350V366Z"/>
+<rect class="d-tile-b maas" x="28" y="342" width="226" height="54" rx="8"/>
+<text class="d-kind maas" x="40" y="358.5">Policy</text>
+<text class="d-own" x="244" y="358" text-anchor="end">MaaS</text>
+<text class="d-s" x="40" y="384">from subscriptions, auth policies</text>
+<rect class="d-tile" x="28" y="404" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head maas" d="M28.6 428V412Q28.6 404.6 36 404.6H246Q253.4 404.6 253.4 412V428Z"/>
+<rect class="d-tile-b maas" x="28" y="404" width="226" height="70" rx="8"/>
+<text class="d-kind maas" x="40" y="420.5">ModelProvider</text>
+<text class="d-own" x="244" y="420" text-anchor="end">MaaS</text>
+<text class="d-s" x="40" y="446">backend: pool or Service</text>
+<text class="d-s" x="40" y="462">tenant and model ID from MaaS</text>
+<rect class="d-tab " x="30" y="44" width="123" height="20" rx="5"/>
+<text class="d-tabt" x="91.5" y="58" text-anchor="middle">Tenant namespace</text>
+<rect class="d-tile" x="407" y="78" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M407.6 102V86Q407.6 78.6 415 78.6H625Q632.4 78.6 632.4 86V102Z"/>
+<rect class="d-tile-b " x="407" y="78" width="226" height="70" rx="8"/>
+<text class="d-kind " x="419" y="94.5">MaaSModelRef</text>
+<text class="d-own" x="623" y="94" text-anchor="end">user</text>
+<text class="d-s" x="419" y="120">modelRef: LLMInferenceService</text>
+<text class="d-s" x="419" y="136">cleanup finalizer already exists</text>
+<rect class="d-tile" x="407" y="156" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M407.6 180V164Q407.6 156.6 415 156.6H625Q632.4 156.6 632.4 164V180Z"/>
+<rect class="d-tile-b " x="407" y="156" width="226" height="70" rx="8"/>
+<text class="d-kind " x="419" y="172.5">LLMInferenceService</text>
+<text class="d-own" x="623" y="172" text-anchor="end">user</text>
+<text class="d-s" x="419" y="198">status: backend, port,</text>
+<text class="d-s" x="419" y="214">model names, Ready</text>
+<rect class="d-tile" x="421" y="234" width="212" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head ks" d="M421.6 258V242Q421.6 234.6 429 234.6H625Q632.4 234.6 632.4 242V258Z"/>
+<rect class="d-tile-b ks" x="421" y="234" width="212" height="54" rx="8"/>
+<text class="d-kind ks" x="433" y="250.5">InferencePool</text>
+<text class="d-own" x="623" y="250" text-anchor="end">KServe</text>
+<text class="d-s" x="433" y="276">endpointPickerRef: EPP Service</text>
+<rect class="d-tile" x="421" y="296" width="212" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head ks" d="M421.6 320V304Q421.6 296.6 429 296.6H625Q632.4 296.6 632.4 304V320Z"/>
+<rect class="d-tile-b ks" x="421" y="296" width="212" height="54" rx="8"/>
+<text class="d-kind ks" x="433" y="312.5">EPP, workload</text>
+<text class="d-own" x="623" y="312" text-anchor="end">KServe</text>
+<text class="d-s" x="433" y="338">Deployments and Services</text>
+<rect class="d-tile" x="407" y="358" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head maas" d="M407.6 382V366Q407.6 358.6 415 358.6H625Q632.4 358.6 632.4 366V382Z"/>
+<rect class="d-tile-b maas" x="407" y="358" width="226" height="54" rx="8"/>
+<text class="d-kind maas" x="419" y="374.5">InferenceObjective</text>
+<text class="d-own" x="623" y="374" text-anchor="end">MaaS</text>
+<text class="d-s" x="419" y="400">poolRef: InferencePool</text>
+<rect class="d-tab " x="409" y="44" width="116" height="20" rx="5"/>
+<text class="d-tabt" x="467.0" y="58" text-anchor="middle">Model namespace</text>
+<rect class="d-tile" x="786" y="78" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head " d="M786.6 102V86Q786.6 78.6 794 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+<rect class="d-tile-b " x="786" y="78" width="226" height="54" rx="8"/>
+<text class="d-kind " x="798" y="94.5">Platform ingress</text>
+<text class="d-own" x="1002" y="94" text-anchor="end">platform</text>
+<text class="d-s" x="798" y="120">forwards to the Praxis Service</text>
+<rect class="d-tile" x="786" y="140" width="226" height="54" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head gc" d="M786.6 164V148Q786.6 140.6 794 140.6H1004Q1011.4 140.6 1011.4 148V164Z"/>
+<rect class="d-tile-b gc" x="786" y="140" width="226" height="54" rx="8"/>
+<text class="d-kind gc" x="798" y="156.5">Praxis proxy</text>
+<text class="d-own" x="1002" y="156" text-anchor="end">gateway-controller</text>
+<text class="d-s" x="798" y="182">rendered from Proxy and Policy</text>
+<rect class="d-tile" x="786" y="202" width="226" height="70" rx="8" filter="url(#r3-sh)"/>
+<path class="d-head gc" d="M786.6 226V210Q786.6 202.6 794 202.6H1004Q1011.4 202.6 1011.4 210V226Z"/>
+<rect class="d-tile-b gc" x="786" y="202" width="226" height="70" rx="8"/>
+<text class="d-kind gc" x="798" y="218.5">Routing config</text>
+<text class="d-own" x="1002" y="218" text-anchor="end">gateway-controller</text>
+<text class="d-s" x="798" y="244">from the ModelProviders,</text>
+<text class="d-s" x="798" y="260">grouped by publishedName</text>
+<rect class="d-tab " x="788" y="44" width="129" height="20" rx="5"/>
+<text class="d-tabt" x="852.5" y="58" text-anchor="middle">Praxis data plane</text>
+<rect class="d-pill " x="296.0" y="83" width="68" height="18" rx="9"/>
+<text class="d-pillt " x="330" y="95.6" text-anchor="middle">tenantRef</text>
+<rect class="d-pill " x="316.0" y="107" width="68" height="18" rx="9"/>
+<text class="d-pillt " x="350" y="119.6" text-anchor="middle">modelRefs</text>
+<rect class="d-pill maas" x="277.5" y="321" width="85" height="18" rx="9"/>
+<text class="d-pillt maas" x="320" y="333.6" text-anchor="middle">MaaS creates</text>
+<rect class="d-pill " x="345.5" y="381" width="57" height="18" rx="9"/>
+<text class="d-pillt " x="374" y="393.6" text-anchor="middle">backend</text>
+<rect class="d-pill " x="676.0" y="213" width="68" height="18" rx="9"/>
+<text class="d-pillt " x="710" y="225.6" text-anchor="middle">routes to</text>
+<rect class="d-legend" x="16" y="508" width="1008" height="54" rx="8"/>
+<rect class="d-tile" x="32" y="518.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b " x="32" y="518.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="58" y="527.8">user or admin</text>
+<rect class="d-tile" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b ks" x="160.7" y="518.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="186.7" y="527.8">KServe</text>
+<rect class="d-tile" x="248.1" y="518.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b maas" x="248.1" y="518.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="274.1" y="527.8">MaaS</text>
+<rect class="d-tile" x="323.7" y="518.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b gc" x="323.7" y="518.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="349.7" y="527.8">gateway-controller</text>
+<polyline class="d-rail " points="483.9,517.0 483.9,527.0 495.9,527.0"/>
+<text class="d-lg" x="503.9" y="527.8">owned through an ownerReference</text>
+<line class="d-edge " x1="712.8" y1="524.0" x2="742.8" y2="524.0" marker-end="url(#r3-ah)"/>
+<text class="d-lg" x="750.8" y="527.8">reference held in a field</text>
+<line class="d-edge  dash" x1="32" y1="546.0" x2="62" y2="546.0" marker-end="url(#r3-ah)"/>
+<text class="d-lg" x="70" y="549.8">controller action, no reference</text>
+<line class="d-edge warn" x1="278.9" y1="546.0" x2="308.9" y2="546.0" marker-end="url(#r3-ah-warn)"/>
+<text class="d-lg" x="316.9" y="549.8">red: listed as a problem</text>
+<rect class="d-grp " x="484.5" y="540.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="510.5" y="549.8">namespace</text>
+</svg>

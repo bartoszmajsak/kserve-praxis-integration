@@ -1,0 +1,3 @@
+# build/artifact/ holds the pages in the fragment format of the hosting tool. It is published from a local build.
+build/
+__pycache__/

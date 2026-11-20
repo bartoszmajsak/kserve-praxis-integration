@@ -1,0 +1,135 @@
+<svg viewBox="0 0 1040 410" role="img" aria-label="Ownership with MaaS creating the ModelProvider. The KServe controller owns the LLMInferenceService status and the pool or Service. The MaaS controller reads that status and creates the ModelProvider next to the MaaSModelRef, the Proxy and the Policy. gateway-controller reads the ModelProvider and configures the Praxis proxy, which sends requests to the pool or Service. Dependencies run in one direction." xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="f2-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="f2-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="f2-ah-px" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah px" d="M0 0 L10 5 L0 10 z"/></marker>
+<filter id="f2-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+<symbol id="f2-i-hex" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l6 3.5v7L9 16l-6-3.5v-7z"/><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"/></symbol>
+<symbol id="f2-i-shield" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5.5 2v4.6c0 3.3-2.3 5.9-5.5 7.4-3.2-1.5-5.5-4.1-5.5-7.4V4z"/><path d="M6.6 9l1.7 1.7 3.2-3.4"/></symbol>
+<symbol id="f2-i-route" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="13.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="13.5" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 11.5V10c0-2 1.3-3 3.3-3h2.4c1.4 0 2.3-.4 2.9-1.1"/></symbol>
+<symbol id="f2-i-pool" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="8.5" height="8.5" rx="1.5"/><path d="M6.5 6V4.5A1.5 1.5 0 0 1 8 3h5.5A1.5 1.5 0 0 1 15 4.5V10a1.5 1.5 0 0 1-1.5 1.5h-2"/></symbol>
+<symbol id="f2-i-cr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="13" height="13" rx="2.5"/><text x="9" y="11.6" text-anchor="middle" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">CR</text></symbol>
+<symbol id="f2-i-ext" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></symbol>
+<symbol id="f2-i-ctrl" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a5 5 0 1 1-1.7-3.75"/><path d="M12.6 2.6v2.9H9.7"/></symbol>
+</defs>
+<style>
+.d-tile { fill: #161d25; }
+.d-tile-b { fill: none; stroke: #6b7a8b; stroke-width: 1.2; }
+.d-tile-b.gw { stroke: #78aef0; stroke-width: 1.6; }
+.d-tile-b.px { stroke: #4ecba6; stroke-width: 1.6; }
+.d-tile-b.warn { stroke: #f28b60; stroke-width: 1.6; }
+.d-head { fill: #202a35; }
+.d-head.gw { fill: #23303f; }
+.d-head.px { fill: #1d3436; }
+.d-head.warn { fill: #332b2d; }
+.d-kind { fill: #e5eaf0; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12.5px; font-weight: 600; }
+.d-kind.gw { fill: #78aef0; } .d-kind.px { fill: #4ecba6; } .d-kind.warn { fill: #f28b60; }
+.d-own { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; }
+.d-ico { color: #9ba8b6; }
+.d-ico.gw { color: #78aef0; } .d-ico.px { color: #4ecba6; } .d-ico.warn { color: #f28b60; }
+.d-grp { fill: #1b232b; stroke: #6b7a8b; stroke-width: 1.2; stroke-dasharray: 7 4; }
+.d-grp.gw { fill: #1a2531; stroke: #78aef0; }
+.d-grp.px { fill: #17272b; stroke: #4ecba6; }
+.d-tab { fill: #6b7a8b; } .d-tab.gw { fill: #78aef0; } .d-tab.px { fill: #4ecba6; }
+.d-tabt { fill: #161d25; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 600; }
+.d-pill { fill: #161d25; stroke: #2a3541; stroke-width: 1; }
+.d-pill.warn { stroke: #f28b60; } .d-pill.px { stroke: #4ecba6; }
+.d-pillt { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; font-weight: 500; }
+.d-pillt.warn { fill: #f28b60; } .d-pillt.px { fill: #4ecba6; }
+.d-t { fill: #e5eaf0; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 13px; font-weight: 600; }
+.d-s { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; }
+.d-moved { fill: #f28b60; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; font-weight: 600; }
+.d-title { font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+.d-title.gw { fill: #78aef0; } .d-title.px { fill: #4ecba6; } .d-title.warn { fill: #f28b60; }
+.d-edge { stroke: #e5eaf0; stroke-width: 1.3; fill: none; }
+.d-edge.warn { stroke: #f28b60; stroke-width: 2; }
+.d-edge.px { stroke: #4ecba6; stroke-width: 2; }
+.d-edge.dash { stroke-dasharray: 5 4; }
+.d-ah { fill: #e5eaf0; } .d-ah.warn { fill: #f28b60; } .d-ah.px { fill: #4ecba6; }
+.d-rule { stroke: #2a3541; stroke-width: 1; }
+.d-legend { fill: #161d25; stroke: #2a3541; stroke-width: 1; }
+.d-lg { fill: #9ba8b6; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; }
+</style>
+<rect width="1040" height="410" fill="#0d1117"/>
+<rect class="d-grp " x="764" y="54" width="260" height="170" rx="12"/>
+<rect class="d-grp " x="390" y="54" width="260" height="232" rx="12"/>
+<rect class="d-grp " x="16" y="54" width="260" height="170" rx="12"/>
+<polyline class="d-edge px" points="390,113 264,113" marker-end="url(#f2-ah-px)"/>
+<polyline class="d-edge " points="776,113 638,113" marker-end="url(#f2-ah)"/>
+<polyline class="d-edge  dash" points="894.0,210 894.0,316 146.0,316 146.0,210" marker-end="url(#f2-ah)"/>
+<rect class="d-tab " x="30" y="44" width="129" height="20" rx="5"/>
+<text class="d-tabt" x="94.5" y="58" text-anchor="middle">KServe controller</text>
+<rect class="d-tile" x="28" y="78" width="236" height="70" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M28.6 102V86Q28.6 78.6 36 78.6H256Q263.4 78.6 263.4 86V102Z"/>
+<rect class="d-tile-b " x="28" y="78" width="236" height="70" rx="8"/>
+<use class="d-ico " href="#f2-i-cr" x="36" y="81" width="18" height="18"/>
+<text class="d-kind " x="60" y="94.5">LLMInferenceService</text>
+<text class="d-own" x="254" y="94" text-anchor="end">user</text>
+<text class="d-s" x="40" y="120">status: backend, port,</text>
+<text class="d-s" x="40" y="136">model names, Ready</text>
+<rect class="d-tile" x="28" y="156" width="236" height="54" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M28.6 180V164Q28.6 156.6 36 156.6H256Q263.4 156.6 263.4 164V180Z"/>
+<rect class="d-tile-b " x="28" y="156" width="236" height="54" rx="8"/>
+<use class="d-ico " href="#f2-i-pool" x="36" y="159" width="18" height="18"/>
+<text class="d-kind " x="60" y="172.5">Pool or Service</text>
+<text class="d-own" x="254" y="172" text-anchor="end">KServe creates</text>
+<text class="d-s" x="40" y="198">InferencePool, EPP, pods</text>
+<rect class="d-tab " x="404" y="44" width="116" height="20" rx="5"/>
+<text class="d-tabt" x="462.0" y="58" text-anchor="middle">MaaS controller</text>
+<rect class="d-tile" x="402" y="78" width="236" height="70" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head px" d="M402.6 102V86Q402.6 78.6 410 78.6H630Q637.4 78.6 637.4 86V102Z"/>
+<rect class="d-tile-b px" x="402" y="78" width="236" height="70" rx="8"/>
+<use class="d-ico px" href="#f2-i-cr" x="410" y="81" width="18" height="18"/>
+<text class="d-kind px" x="434" y="94.5">ModelProvider</text>
+<text class="d-own" x="628" y="94" text-anchor="end">MaaS creates</text>
+<text class="d-s" x="414" y="120">backend, model ID and tenant</text>
+<text class="d-s" x="414" y="136">written by MaaS only</text>
+<rect class="d-tile" x="402" y="156" width="236" height="54" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M402.6 180V164Q402.6 156.6 410 156.6H630Q637.4 156.6 637.4 164V180Z"/>
+<rect class="d-tile-b " x="402" y="156" width="236" height="54" rx="8"/>
+<use class="d-ico " href="#f2-i-cr" x="410" y="159" width="18" height="18"/>
+<text class="d-kind " x="434" y="172.5">MaaSModelRef</text>
+<text class="d-own" x="628" y="172" text-anchor="end">user</text>
+<text class="d-s" x="414" y="198">names the service and the tenant</text>
+<rect class="d-tile" x="402" y="218" width="236" height="54" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M402.6 242V226Q402.6 218.6 410 218.6H630Q637.4 218.6 637.4 226V242Z"/>
+<rect class="d-tile-b " x="402" y="218" width="236" height="54" rx="8"/>
+<use class="d-ico " href="#f2-i-hex" x="410" y="221" width="18" height="18"/>
+<text class="d-kind " x="434" y="234.5">Proxy, Policy</text>
+<text class="d-own" x="628" y="234" text-anchor="end">MaaS creates</text>
+<text class="d-s" x="414" y="260">one per tenant</text>
+<rect class="d-tab " x="778" y="44" width="60" height="20" rx="5"/>
+<text class="d-tabt" x="808.0" y="58" text-anchor="middle">Praxis</text>
+<rect class="d-tile" x="776" y="78" width="236" height="70" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M776.6 102V86Q776.6 78.6 784 78.6H1004Q1011.4 78.6 1011.4 86V102Z"/>
+<rect class="d-tile-b " x="776" y="78" width="236" height="70" rx="8"/>
+<use class="d-ico " href="#f2-i-ctrl" x="784" y="81" width="18" height="18"/>
+<text class="d-kind " x="808" y="94.5">gateway-controller</text>
+<text class="d-s" x="788" y="120">reads providers, Proxy, Policy</text>
+<text class="d-s" x="788" y="136">renders the proxy config</text>
+<rect class="d-tile" x="776" y="156" width="236" height="54" rx="8" filter="url(#f2-sh)"/>
+<path class="d-head " d="M776.6 180V164Q776.6 156.6 784 156.6H1004Q1011.4 156.6 1011.4 164V180Z"/>
+<rect class="d-tile-b " x="776" y="156" width="236" height="54" rx="8"/>
+<use class="d-ico " href="#f2-i-hex" x="784" y="159" width="18" height="18"/>
+<text class="d-kind " x="808" y="172.5">Praxis proxy</text>
+<text class="d-s" x="788" y="198">routes on the published model name</text>
+<rect class="d-pill px" x="284.5" y="104" width="85" height="18" rx="9"/>
+<text class="d-pillt px" x="327" y="116.6" text-anchor="middle">reads status</text>
+<rect class="d-pill " x="684.0" y="104" width="46" height="18" rx="9"/>
+<text class="d-pillt " x="707" y="116.6" text-anchor="middle">reads</text>
+<rect class="d-pill " x="463.5" y="307" width="113" height="18" rx="9"/>
+<text class="d-pillt " x="520" y="319.6" text-anchor="middle">sends requests to</text>
+<rect class="d-legend" x="16" y="344" width="1008" height="54" rx="8"/>
+<line class="d-edge px" x1="32" y1="360.0" x2="62" y2="360.0" marker-end="url(#f2-ah-px)"/>
+<text class="d-lg" x="70" y="363.8">MaaS reads the status, in place of the HTTPRoute lookup</text>
+<line class="d-edge " x1="420.5" y1="360.0" x2="450.5" y2="360.0" marker-end="url(#f2-ah)"/>
+<text class="d-lg" x="458.5" y="363.8">a controller reads the object it points at</text>
+<line class="d-edge  dash" x1="732.3" y1="360.0" x2="762.3" y2="360.0" marker-end="url(#f2-ah)"/>
+<text class="d-lg" x="770.3" y="363.8">request path</text>
+<rect class="d-tile" x="32" y="376.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b px" x="32" y="376.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="58" y="385.8">written by MaaS only</text>
+<rect class="d-grp " x="202.0" y="376.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="228.0" y="385.8">objects managed by one controller</text>
+<text class="d-lg" x="448.70000000000005" y="385.8">label on the right of a tile: who writes it</text>
+</svg>
