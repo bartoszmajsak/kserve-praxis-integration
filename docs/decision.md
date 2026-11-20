@@ -59,8 +59,7 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 
 - `spec.router.route` stays in the service spec, with `group` and `weight` when a canary needs them. KServe publishes them in status, and it does not create the HTTPRoute for a service that is served through Praxis.
 - `spec.router.gateway.refs` stays in use. MaaS resolves the tenant from it, and KServe finds the Gateway of the service through it.
-- KServe recognises a Praxis-based deployment from the Gateway the service references. It already fetches the Gateway and its `GatewayClass` for every parent of a route ([`router_discovery.go:61-86`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router_discovery.go#L61-L86)). Which property of the Gateway carries the signal has to be confirmed before this is built.
-- The `GatewayClass` is a candidate for that signal only if the Gateway in front of the proxy has a class of its own. A Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller` ([`deploy/gatewayclass.yaml:1-6`](https://github.com/praxis-proxy/operator/blob/1a9f9d57cd6bf5362291bcf9e1655770747224a3/deploy/gatewayclass.yaml#L1-L6)). A Gateway from another provider carries the class of that provider. The integration proposal in `gateway-controller` does not name a class and leaves open how KServe recognises Praxis ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+- KServe recognises a Praxis-based deployment from the Gateway the service references. How the Gateway shows that is an open question.
 
 ## Benefits
 
@@ -81,6 +80,14 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 - A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
 - When an `LLMInferenceService` is stopped or deleted, KServe removes the pool and the Service immediately, but the routing entry stays in the Praxis configuration until MaaS removes it. Until then Praxis routes requests to a backend that no longer exists, so MaaS has to remove the entry as soon as the service stops.
 - Canary weights stay on the service, in `spec.router.route`, and MaaS reads them from the service status. We would not add a weight field to `MaaSModelRef`, because it would compete with the weight of a `ModelProvider` later.
+
+## Open questions
+
+- **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route ([`router_discovery.go:61-86`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router_discovery.go#L61-L86)), so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller` ([`deploy/gatewayclass.yaml:1-6`](https://github.com/praxis-proxy/operator/blob/1a9f9d57cd6bf5362291bcf9e1655770747224a3/deploy/gatewayclass.yaml#L1-L6)), and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today ([`router.go:83`](https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83)). The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+- **How services that are not published through MaaS are served.** They have no routing entry in this decision.
+- **Where in the status KServe publishes the request paths that go through the EPP.** The fields are not designed.
+- **Where `maas-api` is served.** Today it has its own HTTPRoute on the tenant Gateway.
+- **Whether the gateway-level Kuadrant policies are removed at the cut-over of a tenant or after it.** They apply to the forwarding route as well.
 
 ## Dependencies
 
@@ -181,6 +188,5 @@ The decision is based on reading code, issues and the proposal. The following wa
 - Nothing was run on a cluster. How services with no route behave is read from code. Two KServe unit tests covering the readiness path were run and pass.
 - That routing can stay MaaS-defined is taken from a remark in the proposal. What an inline filter chain in a `Proxy` can express was read from the types, and nothing renders it yet.
 - The pod roll on a routing change is read from the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82) at [`aa8180f`](https://github.com/praxis-proxy/gateway-controller/commit/aa8180fdf5734289cfdfcfd6efcd6a744e41b485). It was not run, and the draft can change before it merges.
-- How KServe recognises a Gateway that is in front of a Praxis proxy. The lookup of the Gateway exists, and the property to read is not defined.
 - The dashboard was read on `main` at [`16366ea`](https://github.com/opendatahub-io/odh-dashboard/tree/16366ea36ccdeb8f4417c9154e724682dd45b73b). Its release branches were not read, and nothing was exercised in a browser.
 - The MaaS change list comes from a single read of the code. We rechecked the rows about the route, the rate limit policy, `maas-api`, the `InferenceObjective` and the tenant Gateway, and took the rest from the note.

@@ -95,8 +95,7 @@ No object represents the routing of a single model. It is part of the `Proxy`, w
 
 - `spec.router.route` stays in the service spec, with `group` and `weight` when a canary needs them. KServe publishes them in status, and it does not create the HTTPRoute for a service that is served through Praxis.
 - `spec.router.gateway.refs` stays in use. MaaS resolves the tenant from it, and KServe finds the Gateway of the service through it.
-- KServe recognises a Praxis-based deployment from the Gateway the service references. It already fetches the Gateway and its `GatewayClass` for every parent of a route. Which property of the Gateway carries the signal has to be confirmed before this is built.
-- The `GatewayClass` is a candidate for that signal only if the Gateway in front of the proxy has a class of its own. A Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`. A Gateway from another provider carries the class of that provider. The integration proposal in `gateway-controller` does not name a class and leaves open how KServe recognises Praxis ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+- KServe recognises a Praxis-based deployment from the Gateway the service references. How the Gateway shows that is an open question.
 
 ### Benefits
 
@@ -156,6 +155,14 @@ Delivering the decision depends on work in Praxis that is not ours. The cut-over
 - `gateway-controller` renders and deploys the proxy from a `Proxy` and a `Policy`. This is tracked in [`gateway-controller#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17) and in the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82).
 - The EPP client of Praxis selects its target per model, supports TLS and sends response bodies to the EPP. Services with a scheduler need it. No issue is open for it, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed.
 - The policy engine supports Kubernetes token authentication and authorization ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213), [`policy#214`](https://github.com/praxis-proxy/policy/issues/214)), a token limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352), [`policy#308`](https://github.com/praxis-proxy/policy/issues/308)) and limit counters shared between replicas ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)).
+
+## Open Questions
+
+- **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today. The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+- **How services that are not published through MaaS are served.** They have no routing entry in this decision.
+- **Where in the status KServe publishes the request paths that go through the EPP.** The fields are not designed.
+- **Where `maas-api` is served.** Today it has its own HTTPRoute on the tenant Gateway.
+- **Whether the gateway-level Kuadrant policies are removed at the cut-over of a tenant or after it.** They apply to the forwarding route as well.
 
 ## Alternatives
 

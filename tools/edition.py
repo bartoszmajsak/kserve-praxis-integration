@@ -167,6 +167,7 @@ def compose(bodies):
         chapter(prose("<h2>Goals</h2>", list_after(goals, "<h3>Goals</h3>"))),
         chapter(prose("<h2>Non-Goals</h2>", list_after(goals, "<h3>Non-goals</h3>"))),
         how,
+        chapter(inner(section(decision, "Open questions"), "Open questions", "<h2>Open Questions</h2>")),
         alternative,
         chapter(inner(section(decision, "Security and privacy"), "Security and privacy", "<h2>Security and Privacy Considerations</h2>")),
         chapter(inner(section(decision, "Costs and limits"), "Costs and limits", "<h2>Risks</h2>")),
