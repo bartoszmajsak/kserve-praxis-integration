@@ -2,7 +2,7 @@
 
 Decision record, Praxis data plane.
 
-Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the `ModelProvider`, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in [Praxis decision](decision.md).
+Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the `ModelProvider`, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in [Decision](decision.md).
 
 ## Reading the figures
 
@@ -82,7 +82,7 @@ MaaS writes every object in the tenant namespace, and KServe writes only next to
 
 ## Comparison
 
-The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Praxis decision](decision.md).
+The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Decision](decision.md).
 
 | Relationship | Today | Option 1 | Option 2 | Preferred |
 |---|---|---|---|---|

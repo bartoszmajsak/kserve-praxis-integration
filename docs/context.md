@@ -7,7 +7,7 @@ Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `
 | Topic | Summary | Detail |
 |---|---|---|
 | Problem | MaaS and KServe integrate through the HTTPRoute | MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route. |
-| What can help | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. The details are in [Praxis decision](decision.md). |
+| What can help | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. The details are in [Decision](decision.md). |
 | Migration | In stages, per tenant | MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis. |
 
 ## Praxis in the request path

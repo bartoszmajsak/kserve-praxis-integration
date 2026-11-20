@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Praxis alternatives</title>
+<title>Alternatives - KServe and Praxis integration</title>
 <meta name="description" content="The options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.">
 <script>
   (function () {
@@ -213,10 +213,10 @@
 <div class="site-bar">
   <nav aria-label="Pages">
     <a href="index.html">Overview</a>
-    <a href="decision.html">Praxis decision</a>
-    <a href="alternatives.html" aria-current="page">Praxis alternatives</a>
-    <a href="context.html">Praxis context</a>
-    <a href="migration.html">Praxis migration</a>
+    <a href="decision.html">Decision</a>
+    <a href="alternatives.html" aria-current="page">Alternatives</a>
+    <a href="context.html">Context</a>
+    <a href="migration.html">Migration</a>
   </nav>
   <div class="controls">
     <div class="switch view" role="radiogroup" aria-label="View" hidden>
@@ -236,7 +236,7 @@
 <header class="prose">
   <div class="eyebrow">Decision record · Praxis data plane</div>
   <h1>Alternatives considered</h1>
-  <p class="lede">Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the <code>ModelProvider</code>, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in <a href="decision.html">Praxis decision</a>.</p>
+  <p class="lede">Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the <code>ModelProvider</code>, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in <a href="decision.html">Decision</a>.</p>
 </header>
 
 <section>
@@ -792,7 +792,7 @@
 <section>
   <div class="prose">
     <h2>Comparison</h2>
-    <p>The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in <a href="decision.html">Praxis decision</a>.</p>
+    <p>The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in <a href="decision.html">Decision</a>.</p>
   </div>
   <div class="tbl wide">
     <table>
@@ -833,7 +833,7 @@
 
 Decision record, Praxis data plane.
 
-Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the `ModelProvider`, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+Two other ways to replace the per-model HTTPRoute were considered. In option 1 KServe creates the `ModelProvider`, and in option 2 MaaS creates it. The figures show which object references which, which object owns which, and which controller writes each object, for both options and for the current setup they are compared with. The preferred option is described in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
 
 ## Reading the figures
 
@@ -913,7 +913,7 @@ MaaS writes every object in the tenant namespace, and KServe writes only next to
 
 ## Comparison
 
-The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+The table lists the relationships that change between the current setup, the two alternatives and the preferred option, which is described in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
 
 | Relationship | Today | Option 1 | Option 2 | Preferred |
 |---|---|---|---|---|

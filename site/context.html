@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Praxis context</title>
+<title>Context - KServe and Praxis integration</title>
 <meta name="description" content="How a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.">
 <script>
   (function () {
@@ -213,10 +213,10 @@
 <div class="site-bar">
   <nav aria-label="Pages">
     <a href="index.html">Overview</a>
-    <a href="decision.html">Praxis decision</a>
-    <a href="alternatives.html">Praxis alternatives</a>
-    <a href="context.html" aria-current="page">Praxis context</a>
-    <a href="migration.html">Praxis migration</a>
+    <a href="decision.html">Decision</a>
+    <a href="alternatives.html">Alternatives</a>
+    <a href="context.html" aria-current="page">Context</a>
+    <a href="migration.html">Migration</a>
   </nav>
   <div class="controls">
     <div class="switch view" role="radiogroup" aria-label="View" hidden>
@@ -248,7 +248,7 @@
   <div>
     <span class="q">What can help</span>
     <span class="a">A status contract, and MaaS writes the routing</span>
-    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, with or without a route. MaaS writes the routing into the tenant's <code>Proxy</code> from it. The details are in <a href="decision.html">Praxis decision</a>.</p>
+    <p>KServe publishes the backend, the port, the model names and <code>Ready</code> in the service status, with or without a route. MaaS writes the routing into the tenant's <code>Proxy</code> from it. The details are in <a href="decision.html">Decision</a>.</p>
   </div>
   <div>
     <span class="q">Migration</span>
@@ -526,7 +526,7 @@ Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `
 | Topic | Summary | Detail |
 |---|---|---|
 | Problem | MaaS and KServe integrate through the HTTPRoute | MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route. |
-| What can help | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. The details are in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html). |
+| What can help | A status contract, and MaaS writes the routing | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS writes the routing into the tenant's `Proxy` from it. The details are in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html). |
 | Migration | In stages, per tenant | MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis. |
 
 ## Praxis in the request path

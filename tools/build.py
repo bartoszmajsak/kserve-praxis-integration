@@ -79,6 +79,9 @@ SITE_URL = "https://bartoszmajsak.github.io/kserve-praxis-integration/"
 RAW_URL = "https://raw.githubusercontent.com/bartoszmajsak/kserve-praxis-integration/main/docs/"
 PAGE_LINK = re.compile(r'href="([a-z0-9-]+)\.html"')
 
+# A fragment is listed by its host on its own, where a one-word title says too little.
+ARTIFACT_TITLE = "Praxis {}"
+
 PLACEHOLDER = re.compile(r"^([ \t]*)<!-- figure: ([a-z0-9-]+) -->[ \t]*$", flags=re.M)
 BODY = '<div class="page">'
 
@@ -163,12 +166,14 @@ def render():
             raise BuildError(f"{page.name}: {error}") from None
 
         out[f"docs/{page.name}.md"] = markdown
+        title = html.escape(ARTIFACT_TITLE.format(src.title.lower()))
+        head = re.sub(r"<title>.*?</title>", lambda m: f"<title>{title}</title>", src.head, count=1)
         out[f"build/artifact/{page.name}.html"] = (
-            f"{src.head.rstrip()}\n<style>\n{css}</style>\n\n"
+            f"{head.rstrip()}\n<style>\n{css}</style>\n\n"
             + PAGE_LINK.sub(lambda m: f'href="{SITE_URL}{m.group(1)}.html"', body)
         )
         out[f"site/{page.name}.html"] = site_html.document(
-            src.title, page.description, src.font_links, css, body, links, f"{page.name}.html",
+            f"{src.title} - {SITE_TITLE}", page.description, src.font_links, css, body, links, f"{page.name}.html",
             markdown=portable(markdown),
         )
         for name, fig in figs.items():

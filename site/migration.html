@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Praxis migration</title>
+<title>Migration - KServe and Praxis integration</title>
 <meta name="description" content="Work in progress: the stages in which a tenant can move to Praxis, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.">
 <script>
   (function () {
@@ -213,10 +213,10 @@
 <div class="site-bar">
   <nav aria-label="Pages">
     <a href="index.html">Overview</a>
-    <a href="decision.html">Praxis decision</a>
-    <a href="alternatives.html">Praxis alternatives</a>
-    <a href="context.html">Praxis context</a>
-    <a href="migration.html" aria-current="page">Praxis migration</a>
+    <a href="decision.html">Decision</a>
+    <a href="alternatives.html">Alternatives</a>
+    <a href="context.html">Context</a>
+    <a href="migration.html" aria-current="page">Migration</a>
   </nav>
   <div class="controls">
     <div class="switch view" role="radiogroup" aria-label="View" hidden>
@@ -235,7 +235,7 @@
 
 <header class="prose">
   <div class="eyebrow">Praxis data plane · MaaS and KServe</div>
-  <h1>Praxis migration</h1>
+  <h1>Migration</h1>
   <p class="warning">The migration scenario is a work in progress and shouldn't be taken seriously yet.</p>
   <p class="lede">A tenant can move from Gateway API on Istio to Praxis in stages, with the tenant Gateway kept as the ingress and no change to what users write. The preparation in MaaS and KServe can start now. The cut-over depends on work in Praxis that is still open.</p>
 </header>
@@ -489,7 +489,7 @@
 <section>
   <div class="prose">
     <h2>What can start now</h2>
-    <p>Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in <a href="decision.html">Praxis decision</a>.</p>
+    <p>Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in <a href="decision.html">Decision</a>.</p>
     <ul>
       <li>MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from <code>gateway.refs</code>, and writes the <code>InferenceObjective</code> without checking the route.</li>
       <li>KServe lets a service with a scheduler and no route become <code>Ready</code>, and publishes the pool, the port, the served model names and the request paths that go through the EPP for it.</li>
@@ -539,7 +539,7 @@
       <li>In stage 2 Istio and Praxis call the same EPP. Its TLS is controlled by a cluster-wide KServe setting, and AFAICT the Praxis <code>ext_proc</code> client has no TLS, so test traffic for a service with a scheduler does not work yet either.</li>
       <li>Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to remove the routing entry at the same time.</li>
       <li>The model ID is a contract. Clients send the name MaaS publishes today, so the routing key has to equal <code>status.resolvedModelAlias</code>.</li>
-      <li>Requests to per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in <a href="decision.html">Praxis decision</a>.</li>
+      <li>Requests to per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in <a href="decision.html">Decision</a>.</li>
     </ul>
   </div>
 </section>
@@ -563,7 +563,7 @@
 
 <div class="md-view" hidden>
   <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
-  <pre class="md-source" tabindex="0"># Praxis migration
+  <pre class="md-source" tabindex="0"># Migration
 
 Praxis data plane, MaaS and KServe.
 
@@ -603,7 +603,7 @@ The path of a client request in each stage. In stages 1 and 2 the per-model HTTP
 
 ## What can start now
 
-Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
 
 - MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from `gateway.refs`, and writes the `InferenceObjective` without checking the route.
 - KServe lets a service with a scheduler and no route become `Ready`, and publishes the pool, the port, the served model names and the request paths that go through the EPP for it.
@@ -639,7 +639,7 @@ Stage 2 is a verification stage. It shows that the proxy, the policies and the r
 - In stage 2 Istio and Praxis call the same EPP. Its TLS is controlled by a cluster-wide KServe setting, and AFAICT the Praxis `ext_proc` client has no TLS, so test traffic for a service with a scheduler does not work yet either.
 - Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to remove the routing entry at the same time.
 - The model ID is a contract. Clients send the name MaaS publishes today, so the routing key has to equal `status.resolvedModelAlias`.
-- Requests to per-model path URLs of the form `/&lt;namespace&gt;/&lt;name&gt;/v1/...` stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in [Praxis decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+- Requests to per-model path URLs of the form `/&lt;namespace&gt;/&lt;name&gt;/v1/...` stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
 
 ## Not verified
 

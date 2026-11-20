@@ -1,4 +1,4 @@
-# Praxis migration
+# Migration
 
 Praxis data plane, MaaS and KServe.
 
@@ -38,7 +38,7 @@ The path of a client request in each stage. In stages 1 and 2 the per-model HTTP
 
 ## What can start now
 
-Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in [Praxis decision](decision.md).
+Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in [Decision](decision.md).
 
 - MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from `gateway.refs`, and writes the `InferenceObjective` without checking the route.
 - KServe lets a service with a scheduler and no route become `Ready`, and publishes the pool, the port, the served model names and the request paths that go through the EPP for it.
@@ -74,7 +74,7 @@ Stage 2 is a verification stage. It shows that the proxy, the policies and the r
 - In stage 2 Istio and Praxis call the same EPP. Its TLS is controlled by a cluster-wide KServe setting, and AFAICT the Praxis `ext_proc` client has no TLS, so test traffic for a service with a scheduler does not work yet either.
 - Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to remove the routing entry at the same time.
 - The model ID is a contract. Clients send the name MaaS publishes today, so the routing key has to equal `status.resolvedModelAlias`.
-- Requests to per-model path URLs of the form `/<namespace>/<name>/v1/...` stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in [Praxis decision](decision.md).
+- Requests to per-model path URLs of the form `/<namespace>/<name>/v1/...` stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in [Decision](decision.md).
 
 ## Not verified
 

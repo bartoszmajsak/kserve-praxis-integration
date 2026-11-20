@@ -2,10 +2,10 @@
 
 How a KServe `LLMInferenceService` is served when the data plane moves from Gateway API on Istio to Praxis, written as a decision record, and the scripts that build it.
 
-- [Praxis decision](docs/decision.md) describes the preferred option: `MaaSModelRef` stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's `Proxy`. It lists what that gains, what it costs and what changes in KServe and MaaS.
-- [Praxis alternatives](docs/alternatives.md) describes the options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.
-- [Praxis context](docs/context.md) covers how a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.
-- [Praxis migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
+- [Decision](docs/decision.md) describes the preferred option: `MaaSModelRef` stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's `Proxy`. It lists what that gains, what it costs and what changes in KServe and MaaS.
+- [Alternatives](docs/alternatives.md) describes the options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.
+- [Context](docs/context.md) covers how a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.
+- [Migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
 
 ## Reading
 

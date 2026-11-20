@@ -1,4 +1,4 @@
-<title>Praxis decision</title>
+<title>Decision</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 
@@ -14,7 +14,7 @@
   <div>
     <span class="q">Status</span>
     <span class="a">Preferred option</span>
-    <p>It was discussed as option 3. Options 1 and 2 are described in <a href="alternatives.html">Praxis alternatives</a>.</p>
+    <p>It was discussed as option 3. Options 1 and 2 are described in <a href="alternatives.html">Alternatives</a>.</p>
   </div>
   <div>
     <span class="q">Decision</span>
@@ -31,7 +31,7 @@
 <section>
   <div class="prose">
     <h2>Context</h2>
-    <p>Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the <code>ModelProvider</code>, and its API is still open (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>). The request path, the problems the move exposes and the state of Praxis are described in <a href="context.html">Praxis context</a>.</p>
+    <p>Praxis routes on the model name in the request body, and no per-model HTTPRoute is written. Today MaaS looks up that route, attaches its policies to it and derives the tenant from it, and KServe publishes the status MaaS needs while the route exists. In the Praxis design the object that replaces the route is the <code>ModelProvider</code>, and its API is still open (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>). The request path, the problems the move exposes and the state of Praxis are described in <a href="context.html">Context</a>.</p>
   </div>
 </section>
 
@@ -73,7 +73,7 @@
     <div class="scroll">
       <!-- figure: relationships-option-3 -->
     </div>
-    <figcaption>No object represents the routing of a single model. It is part of the <code>Proxy</code>, which MaaS already writes. The marks are explained in <a href="alternatives.html">Praxis alternatives</a>.</figcaption>
+    <figcaption>No object represents the routing of a single model. It is part of the <code>Proxy</code>, which MaaS already writes. The marks are explained in <a href="alternatives.html">Alternatives</a>.</figcaption>
     <div class="who">
       <div>
         <h3>Who does what, and why</h3>
@@ -122,7 +122,7 @@
 <section>
   <div class="prose">
     <h2>Adopting the ModelProvider later</h2>
-    <p>The preferred option is the first step towards option 2 in <a href="alternatives.html">Praxis alternatives</a>, where MaaS creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>. The step can be taken when the API is defined and implemented.</p>
+    <p>The preferred option is the first step towards option 2 in <a href="alternatives.html">Alternatives</a>, where MaaS creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>. The step can be taken when the API is defined and implemented.</p>
     <ul>
       <li><code>gateway-controller</code> adds the type, its controller and the routing that is generated from it.</li>
       <li>MaaS stops writing routing entries into the <code>Proxy</code>, creates one <code>ModelProvider</code> per <code>MaaSModelRef</code>, and hands the routing slot of the tenant to <code>gateway-controller</code>.</li>
@@ -226,7 +226,7 @@
 <section>
   <div class="prose">
     <h2>Migration</h2>
-    <p>A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in <a href="migration.html">Praxis migration</a>, which is a work in progress.</p>
+    <p>A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in <a href="migration.html">Migration</a>, which is a work in progress.</p>
   </div>
 </section>
 

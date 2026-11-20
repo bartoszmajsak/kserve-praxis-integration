@@ -1,3 +1,3 @@
 # Moved
 
-The content is now in [Praxis alternatives](alternatives.md).
+The content is now in [Alternatives](alternatives.md).
