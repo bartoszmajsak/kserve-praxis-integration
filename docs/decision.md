@@ -31,6 +31,7 @@ We keep the scope small on purpose, given the timelines. The non-goals list what
 
 - The move to Praxis itself. It is the starting point and is not decided here.
 - Services that are not published through MaaS. How they are served is open and is not decided here.
+- The routing of external models. It is a MaaS concern, described in [External models](external-models.md).
 - Gateway API support in Praxis, or a translation of the HTTPRoute that KServe generates.
 - Replacing `MaaSModelRef` as the object users write, or defining the `ModelProvider` API.
 - Weighted routing between services in the first step. The weights stay on the service and KServe publishes them in status, so they are available when Praxis routes by weight.

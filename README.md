@@ -5,6 +5,7 @@ How a KServe `LLMInferenceService` that is published through MaaS is served when
 - [Decision](docs/decision.md) describes the decision: `MaaSModelRef` stays the object users write, KServe publishes the backend in status, and MaaS writes the routing into the tenant's `Proxy`. It lists what that gains, what it costs and what changes in KServe and MaaS.
 - [Alternatives](docs/alternatives.md) describes the options that were considered and not preferred, with the custom resources of each: which one references which, which one owns which, and which controller writes each.
 - [Context](docs/context.md) covers how a request reaches the model today and with Praxis, what the move exposes in the integration between MaaS and KServe, and what Praxis supports of Gateway API.
+- [External models](docs/external-models.md) covers how MaaS external models are routed today, what Praxis offers when it connects to the provider itself, and what is undefined. It is a MaaS concern and not part of the decision.
 - [Migration](docs/migration.md) is a work in progress. It describes the stages in which a tenant can move, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.
 - [Doc edition](docs/doc-edition.md) is the decision as one document, in the format of an Open Data Hub architecture decision record, for pasting into a doc. The build composes it from the pages. It leaves out the code references, the state of Praxis and the migration.
 

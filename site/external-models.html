@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>External models - KServe, MaaS and Praxis integration</title>
+<meta name="description" content="How MaaS external models are routed today, what Praxis offers when it connects to the provider itself, and what is undefined. It is a MaaS concern and not part of the decision.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column. Figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --ks: #2459a6;      /* written by KServe */
+    --maas: #0b7d60;    /* written by MaaS */
+    --gc: #6b46c1;      /* written by gateway-controller */
+    --agc: #8a6100;     /* written by ai-gateway-controller */
+    --warn: #c0352b;    /* a problem, or the piece that carries the routing decision */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+      --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --ks: #78aef0; --maas: #4ecba6;
+    --gc: #b79cf2; --agc: #e0b040; --warn: #ff8a80;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+  .legend { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; font-size: 14.5px; }
+  .legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+  .chips { display: inline-flex; gap: 4px; flex: none; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line-strong); background: var(--panel); transform: translateY(2px); }
+  .chip.ks { border-color: var(--ks); } .chip.maas { border-color: var(--maas); }
+  .chip.gc { border-color: var(--gc); } .chip.agc { border-color: var(--agc); }
+  .stroke { width: 30px; height: 0; border-top: 2px solid var(--fg); flex: none; transform: translateY(-4px); }
+  .stroke.dash { border-top-style: dashed; }
+  .stroke.warn { border-top-color: var(--warn); }
+  .stroke.rail { border-top: 0; width: 14px; height: 14px; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); transform: translateY(-2px); margin-right: 16px; }
+  tbody th { font-weight: 600; width: 16%; }
+  .tbl.wide table { min-width: 920px; }
+  .warning { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); font-weight: 500; }
+
+  /* diagram marks: tiles with a header strip, dashed groups and lanes with a tab, ownership rails, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
+  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
+  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
+  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
+  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-ico { color: var(--muted); }
+  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
+  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
+  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
+  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.px { stroke: var(--px); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
+  .d-rule { stroke: var(--line); stroke-width: 1; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+  .d-tile-b.ks { stroke: var(--ks); stroke-width: 1.6; }
+  .d-tile-b.maas { stroke: var(--maas); stroke-width: 1.6; }
+  .d-tile-b.gc { stroke: var(--gc); stroke-width: 1.6; }
+  .d-tile-b.agc { stroke: var(--agc); stroke-width: 1.6; }
+  .d-head.ks { fill: color-mix(in srgb, var(--ks) 13%, var(--panel)); }
+  .d-head.maas { fill: color-mix(in srgb, var(--maas) 13%, var(--panel)); }
+  .d-head.gc { fill: color-mix(in srgb, var(--gc) 13%, var(--panel)); }
+  .d-head.agc { fill: color-mix(in srgb, var(--agc) 15%, var(--panel)); }
+  .d-kind.ks { fill: var(--ks); } .d-kind.maas { fill: var(--maas); }
+  .d-kind.gc { fill: var(--gc); } .d-kind.agc { fill: var(--agc); }
+  .d-pill.maas { stroke: var(--maas); }
+  .d-pillt.maas { fill: var(--maas); }
+  .d-edge.maas { stroke: var(--maas); stroke-width: 2; }
+  .d-ah.maas { fill: var(--maas); }
+  .d-rail { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .d-rail.warn { stroke: var(--warn); stroke-width: 2; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .switch label { position: relative; display: block; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .switch input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .switch input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .md-view {
+    max-width: 1080px; margin: 0 auto; padding-top: 28px; padding-bottom: 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--sans);
+  }
+  .md-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .md-copy { font: inherit; font-size: 13px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .md-copy:hover { background: var(--code-bg); }
+  .md-copy:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .md-status { font-size: 13px; color: var(--muted); }
+  .md-source { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html">Overview</a>
+    <a href="decision.html">Decision</a>
+    <a href="alternatives.html">Alternatives</a>
+    <a href="context.html">Context</a>
+    <a href="external-models.html" aria-current="page">External models</a>
+    <a href="migration.html">Migration</a>
+  </nav>
+  <div class="controls">
+    <div class="switch view" role="radiogroup" aria-label="View" hidden>
+      <label><input type="radio" name="view" value="page"><span>Page</span></label>
+      <label><input type="radio" name="view" value="markdown"><span>Markdown</span></label>
+    </div>
+    <div class="switch theme" role="radiogroup" aria-label="Theme" hidden>
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Praxis data plane · MaaS</div>
+  <h1>External models</h1>
+  <p class="lede">External models are served through objects that exist only on Gateway API and Istio today, and the Gateway's Envoy opens the connection to the provider. With Praxis as the data plane the proxy can open that connection itself, and the same question arises as for KServe models: which component writes the routing. This is a MaaS concern and is not part of the <a href="decision.html">Decision</a>.</p>
+</header>
+
+<div class="answers">
+  <div>
+    <span class="q">Today</span>
+    <span class="a">Envoy connects to the provider</span>
+    <p><code>ai-gateway-controller</code> chooses the provider in a Praxis <code>ext_proc</code> filter and returns the choice to Envoy through an HTTPRoute. Istio objects configure the TLS.</p>
+  </div>
+  <div>
+    <span class="q">With Praxis</span>
+    <span class="a">The proxy can connect to the provider</span>
+    <p>Praxis can connect to a provider over TLS, inject its credential and translate some API formats today. Weights work in one filter only, and failover is missing.</p>
+  </div>
+  <div>
+    <span class="q">Open</span>
+    <span class="a">Which component writes the routing</span>
+    <p>The decision covers KServe models. For external models the documents we read name three different writers.</p>
+  </div>
+</div>
+
+<section>
+  <div class="prose">
+    <h2>External models today</h2>
+    <p>An external model is a model at a provider outside the cluster, such as OpenAI or Anthropic. We read how it is modelled and routed in <code>ai-gateway-controller</code> (AGC) at <a href="https://github.com/opendatahub-io/ai-gateway-controller/commit/02aa4430a07c484a76f5dbcb338ebd726fa48863" target="_blank" rel="noopener"><code>02aa443</code></a> and in MaaS at <a href="https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be" target="_blank" rel="noopener"><code>e0afdbc</code></a>.</p>
+    <h3>Objects</h3>
+    <ul>
+      <li><code>ExternalProvider</code> and <code>ExternalModel</code> are in the group <code>inference.opendatahub.io/v1alpha1</code>. Their Go types are in AGC (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/groupversion_info.go#L28" target="_blank" rel="noopener"><code>groupversion_info.go:28</code></a>).</li>
+      <li>An <code>ExternalProvider</code> holds the provider type, its host name and a reference to the credential Secret (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L48-L70" target="_blank" rel="noopener"><code>externalprovider_types.go:48-70</code></a>). An <code>ExternalModel</code> holds the model name clients use and one or more provider references, each with a target model, an API format and a weight (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalmodel_types.go#L48-L127" target="_blank" rel="noopener"><code>externalmodel_types.go:48-127</code></a>).</li>
+      <li>A user publishes an external model with a <code>MaaSModelRef</code> whose <code>modelRef.kind</code> is <code>ExternalModel</code> (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/api/maas/v1alpha1/maasmodelref_types.go#L77-L90" target="_blank" rel="noopener"><code>maasmodelref_types.go:77-90</code></a>).</li>
+      <li>MaaS does not create the route of an external model. It takes the route name from the status of the <code>ExternalModel</code> and checks that the route exists and is accepted by the Gateway (<a href="https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_external.go#L63-L66" target="_blank" rel="noopener"><code>providers_external.go:63-66</code></a>).</li>
+      <li>AGC writes the rest. It reconciles both kinds <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L21-L23" target="_blank" rel="noopener">"into the tenant-local ExtProc overlay, credential projections, and Envoy-owned provider transport"</a>.</li>
+    </ul>
+    <h3>Request path</h3>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Gateway, before Kuadrant</td><td>A Praxis <code>ext_proc</code> server reads the model name from the request body into the header <code>X-Gateway-Model-Name</code> (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/config/manifests/praxis-extproc/base/config/configmap.yaml#L30-L45" target="_blank" rel="noopener"><code>configmap.yaml:30-45</code></a>).</td></tr>
+        <tr><td>2</td><td>Gateway, Kuadrant</td><td>Authorino and Limitador enforce the <code>AuthPolicy</code> and the <code>TokenRateLimitPolicy</code> that MaaS wrote on the HTTPRoute of the model.</td></tr>
+        <tr><td>3</td><td>Gateway, after Kuadrant</td><td>A second Praxis <code>ext_proc</code> server, one Deployment per tenant, runs <code>intelligent_route</code>, the translation filters when translation is enabled, and <code>credential_inject</code> (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L562-L602" target="_blank" rel="noopener"><code>extproc.go:562-602</code></a>). The provider is chosen from the <code>routing-overlay</code> ConfigMap that AGC publishes. The credential is read from a Secret that the kubelet projects into the pod (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L280-L282" target="_blank" rel="noopener"><code>extproc.go:280-282</code></a>).</td></tr>
+        <tr><td>4</td><td>Gateway, Envoy</td><td>The filter sets the header <code>X-AI-Routing-Candidate</code>, and Envoy selects the route again. A rule of the HTTPRoute <code>external-model-&lt;model&gt;</code> matches the header and points at an <code>ExternalName</code> Service for the provider (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2956-L2966" target="_blank" rel="noopener"><code>reconciler.go:2956-2966</code></a>, <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2996-L2999" target="_blank" rel="noopener"><code>:2996-2999</code></a>).</td></tr>
+        <tr><td>5</td><td>Gateway, Envoy</td><td>Envoy opens the TLS connection to the provider. A <code>ServiceEntry</code> makes the host reachable, and a <code>DestinationRule</code> sets the TLS mode, the SNI and an optional CA (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2813-L2856" target="_blank" rel="noopener"><code>reconciler.go:2813-2856</code></a>).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>The provider is chosen at random or by weight. There is no failover: the controller <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L61-L63" target="_blank" rel="noopener">"does not add controller/ExtProc rollout coordination, health-aware selection, or retries"</a>, and the filter <a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L224-L225" target="_blank" rel="noopener">"does not probe upstream health or retry another candidate when a selected upstream fails"</a>.</li>
+      <li>Praxis never connects to the provider in this setup. It selects the provider, and Envoy forwards the request.</li>
+    </ul>
+    <h3>Who does what, and why</h3>
+    <ul>
+      <li>The user writes the <code>ExternalProvider</code>, the <code>ExternalModel</code> and the credential Secret, and publishes the model with a <code>MaaSModelRef</code>.</li>
+      <li>MaaS writes the <code>AuthPolicy</code> and the <code>TokenRateLimitPolicy</code> on the route, and takes the status of the <code>MaaSModelRef</code> from the route.</li>
+      <li>AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.</li>
+      <li>Kuadrant enforces authentication and token limits in the Gateway.</li>
+      <li>Praxis runs as two <code>ext_proc</code> servers. One reads the model name, the other chooses the provider, translates and adds the credential.</li>
+      <li>Envoy, configured by Istio, connects to the provider.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Dependencies on Gateway API and Istio</h2>
+    <p>Every object AGC writes for the transport exists to return the choice of the provider to Envoy, or to let Envoy reach the provider. AFAICT none of them has a function when the proxy opens the connection itself. One upstream cluster per provider in the proxy configuration takes their place.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Object</th><th>Why it exists</th><th>Written by</th></tr></thead>
+      <tbody>
+        <tr><td>HTTPRoute <code>external-model-&lt;model&gt;</code></td><td>It carries the choice of the provider back to Envoy through a header match, and it is the target of the MaaS policies.</td><td>AGC</td></tr>
+        <tr><td><code>ExternalName</code> Service</td><td>It gives the HTTPRoute a backend for the provider.</td><td>AGC</td></tr>
+        <tr><td><code>ServiceEntry</code></td><td>It lets Envoy resolve and reach the host of the provider.</td><td>AGC</td></tr>
+        <tr><td><code>DestinationRule</code></td><td>It originates TLS to the provider, with SNI and an optional CA.</td><td>AGC</td></tr>
+        <tr><td>Two <code>EnvoyFilter</code> objects</td><td>They insert the two <code>ext_proc</code> filters around the Kuadrant filter and enable them per route (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/config/manifests/external-model/overlays/odh/external-model-envoy-filter.yaml#L3-L66" target="_blank" rel="noopener"><code>external-model-envoy-filter.yaml:3-66</code></a>).</td><td>AGC</td></tr>
+        <tr><td><code>AuthPolicy</code> and <code>TokenRateLimitPolicy</code></td><td>They attach to the HTTPRoute of the model.</td><td>MaaS</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>What AGC plans</h2>
+    <p>AGC describes two modes for Praxis (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L15-L22" target="_blank" rel="noopener"><code>praxis-dataplane-evolution.md:15-22</code></a>). In gateway mode, which is the setup above, Praxis is an <code>ext_proc</code> side-call and Envoy opens the upstream connection. In standard mode Praxis is the tenant-facing gateway, the AI filters run in-process, and Praxis opens the connection.</p>
+    <ul>
+      <li>Standard mode is a draft. The document calls it <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L133-L134" target="_blank" rel="noopener">"Direction of travel from the research spike, not a committed product design"</a>, and says that authentication, quota and token accounting remain open.</li>
+      <li>In that draft Praxis <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L136-L140" target="_blank" rel="noopener">"opens the connection to the generated KServe Service (or ExternalModel provider) without Envoy or Istio on the inference path"</a>.</li>
+      <li>AGC is named as the component that would <a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L202" target="_blank" rel="noopener">"Compile Gateway / KServe / ExternalModel intent into Praxis runtime config"</a>.</li>
+      <li>We found no code for standard mode in AGC or in MaaS.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>What Praxis offers today</h2>
+    <p>We checked what Praxis can do for an external provider when it is the proxy and not an <code>ext_proc</code> server. Most of the request path exists. Failover and egress through an HTTP proxy do not.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Capability</th><th>State</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Connect to a provider by host name over TLS, with SNI and a CA</td><td>Available</td><td>An upstream cluster has a CA, a client certificate, an SNI and a verify setting (<a href="https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/crates/tls/src/config/cluster.rs#L49-L63" target="_blank" rel="noopener"><code>cluster.rs:49-63</code></a>). The CA is taken per cluster, globally or from the system trust store (<a href="https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/tls.md?plain=1#L222-L232" target="_blank" rel="noopener"><code>tls.md:222-232</code></a>).</td></tr>
+        <tr><td>Inject the provider credential</td><td>Available</td><td><code>credential_inject</code> takes the token from a file, an environment variable or an inline value, as a bearer token or an API key. A file is read again after a Secret rotation (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/credential_inject.md?plain=1#L20-L25" target="_blank" rel="noopener"><code>credential_inject.md:20-25</code></a>).</td></tr>
+        <tr><td>Translate API formats</td><td>Available for some pairs</td><td>AGC already uses the filters that translate Chat Completions to the Anthropic API (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L579-L586" target="_blank" rel="noopener"><code>extproc.go:579-586</code></a>).</td></tr>
+        <tr><td>Choose between providers by weight</td><td>Available in one filter</td><td><code>intelligent_route</code> supports <code>weightedRandom</code> with an overlay (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L201-L204" target="_blank" rel="noopener"><code>intelligent_route.md:201-204</code></a>). <code>model_to_provider</code> maps a model to one upstream and has no weight (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/model_to_provider.md?plain=1#L26-L31" target="_blank" rel="noopener"><code>model_to_provider.md:26-31</code></a>).</td></tr>
+        <tr><td>Fail over to another provider</td><td>Missing</td><td><code>intelligent_route</code> does not retry another candidate. An experimental <code>iterative_request_router</code> for provider failover exists and is off by default (<a href="https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/build-features.md?plain=1#L166" target="_blank" rel="noopener"><code>build-features.md:166</code></a>).</td></tr>
+        <tr><td>Count tokens from provider responses</td><td>Available, the limit is experimental</td><td><code>token_count</code> reads usage from streaming and non-streaming responses of five providers (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/token_count.md?plain=1#L10" target="_blank" rel="noopener"><code>token_count.md:10</code></a>). <code>token_rate_limit</code> is experimental and off by default (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/token_rate_limit.md?plain=1#L10" target="_blank" rel="noopener"><code>token_rate_limit.md:10</code></a>).</td></tr>
+        <tr><td>Reach the provider through an HTTP CONNECT proxy</td><td>Missing</td><td>We found no setting for an upstream proxy. The <code>forward-proxy</code> feature is for clients that use Praxis as their proxy, and its runtime is not merged (<a href="https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/build-features.md?plain=1#L169" target="_blank" rel="noopener"><code>build-features.md:169</code></a>).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li><code>intelligent_route</code> selects a cluster and does not define it (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L38-L40" target="_blank" rel="noopener"><code>intelligent_route.md:38-40</code></a>). Every provider needs an upstream cluster in the proxy configuration, and a reload of the overlay cannot add one (<a href="https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L626-L628" target="_blank" rel="noopener"><code>:626-628</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>What the Praxis design says</h2>
+    <p>The control-plane design in <code>gateway-controller</code> covers external providers with the same two objects it uses for models in the cluster. Neither is implemented (<a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>#40</code></a>, <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>#42</code></a>).</p>
+    <ul>
+      <li>A <code>ModelProvider</code> can name an external upstream URL in place of a Service, with a credential Secret and the header to present it in (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L281-L294" target="_blank" rel="noopener"><code>api-v1alpha1.md:281-294</code></a>).</li>
+      <li>The design maps <code>ExternalProvider</code> and <code>ExternalModel</code> to <code>ModelProvider</code> and <code>Model</code> as <a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L550" target="_blank" rel="noopener">"Near 1:1"</a>, and calls it a candidate for MaaS to delegate. It lists the question as open (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L621" target="_blank" rel="noopener"><code>api.md:621</code></a>).</li>
+      <li>Weighting and failover between providers are out of scope of the first API version (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387" target="_blank" rel="noopener"><code>api-v1alpha1.md:386-387</code></a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Open points</h2>
+    <p>The decision for KServe models has MaaS write the routing into the <code>Proxy</code> of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.</p>
+    <ul>
+      <li><strong>Which component writes the routing of external models.</strong> The AGC draft names AGC, the Praxis design suggests that MaaS delegates to <code>ModelProvider</code> and <code>Model</code>, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the <code>Proxy</code> of a tenant has two writers.</li>
+      <li><strong>What MaaS reads for an external model without the HTTPRoute.</strong> The status of the <code>MaaSModelRef</code> and the targets of the policies come from that route today.</li>
+      <li><strong>How the credential reaches the proxy.</strong> Today the kubelet projects the Secret as a file into the <code>ext_proc</code> pod. The <code>Proxy</code> type offers Secret keys as environment variables only (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43" target="_blank" rel="noopener"><code>proxy_types.go:41-43</code></a>).</li>
+      <li><strong>How a private CA is trusted.</strong> An <code>ExternalProvider</code> defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69" target="_blank" rel="noopener"><code>externalprovider_types.go:65-69</code></a>). Praxis needs the CA as a file in its own pod.</li>
+      <li><strong>Weights and failover.</strong> Weights between providers work today. The Praxis design leaves them out of the first API version, and failover exists in neither.</li>
+      <li><strong>How a new provider is added.</strong> It needs a new upstream cluster, so it is a change of the proxy configuration and not only of the routing data.</li>
+      <li><strong>Token limits.</strong> They are as open for external models as for KServe models, and AGC lists them as open for standard mode (<a href="https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L203-L204" target="_blank" rel="noopener"><code>praxis-dataplane-evolution.md:203-204</code></a>).</li>
+      <li><strong>Egress through an HTTP proxy.</strong> Praxis has no upstream proxy setting, which matters for clusters that reach providers only through a proxy.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The findings are based on reading code and design documents. The following was not verified.</p>
+    <ul>
+      <li>Nothing was run on a cluster.</li>
+      <li>The two Praxis repositories were read at <a href="https://github.com/praxis-proxy/ai/commit/a59c9270258a68c68f45419ef02d3f5a0a195fdd" target="_blank" rel="noopener"><code>a59c927</code></a> and <a href="https://github.com/praxis-proxy/praxis/commit/2212314b12a4536774f41ed4e1aec1619d403459" target="_blank" rel="noopener"><code>2212314</code></a>. Both have moved since, so a capability listed as missing may have been added.</li>
+      <li>That users write the <code>ExternalProvider</code> and the <code>ExternalModel</code> is inferred. We found no controller that creates them, apart from a migration of the older kind.</li>
+      <li>How Kuadrant reads the token usage from the response of a provider.</li>
+      <li>That no upstream proxy setting exists in Praxis is the result of a search, not a statement of the project.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<div class="md-view" hidden>
+  <div class="md-tools"><button type="button" class="md-copy">Copy Markdown</button><span class="md-status" role="status"></span></div>
+  <pre class="md-source" tabindex="0"># External models
+
+Praxis data plane, MaaS.
+
+External models are served through objects that exist only on Gateway API and Istio today, and the Gateway's Envoy opens the connection to the provider. With Praxis as the data plane the proxy can open that connection itself, and the same question arises as for KServe models: which component writes the routing. This is a MaaS concern and is not part of the [Decision](https://bartoszmajsak.github.io/kserve-praxis-integration/decision.html).
+
+| Topic | Summary | Detail |
+|---|---|---|
+| Today | Envoy connects to the provider | `ai-gateway-controller` chooses the provider in a Praxis `ext_proc` filter and returns the choice to Envoy through an HTTPRoute. Istio objects configure the TLS. |
+| With Praxis | The proxy can connect to the provider | Praxis can connect to a provider over TLS, inject its credential and translate some API formats today. Weights work in one filter only, and failover is missing. |
+| Open | Which component writes the routing | The decision covers KServe models. For external models the documents we read name three different writers. |
+
+## External models today
+
+An external model is a model at a provider outside the cluster, such as OpenAI or Anthropic. We read how it is modelled and routed in `ai-gateway-controller` (AGC) at [`02aa443`](https://github.com/opendatahub-io/ai-gateway-controller/commit/02aa4430a07c484a76f5dbcb338ebd726fa48863) and in MaaS at [`e0afdbc`](https://github.com/opendatahub-io/models-as-a-service/commit/e0afdbc2fba21070ec56e67a340f221bc448e3be).
+
+### Objects
+
+- `ExternalProvider` and `ExternalModel` are in the group `inference.opendatahub.io/v1alpha1`. Their Go types are in AGC ([`groupversion_info.go:28`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/groupversion_info.go#L28)).
+- An `ExternalProvider` holds the provider type, its host name and a reference to the credential Secret ([`externalprovider_types.go:48-70`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L48-L70)). An `ExternalModel` holds the model name clients use and one or more provider references, each with a target model, an API format and a weight ([`externalmodel_types.go:48-127`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalmodel_types.go#L48-L127)).
+- A user publishes an external model with a `MaaSModelRef` whose `modelRef.kind` is `ExternalModel` ([`maasmodelref_types.go:77-90`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/api/maas/v1alpha1/maasmodelref_types.go#L77-L90)).
+- MaaS does not create the route of an external model. It takes the route name from the status of the `ExternalModel` and checks that the route exists and is accepted by the Gateway ([`providers_external.go:63-66`](https://github.com/opendatahub-io/models-as-a-service/blob/e0afdbc2fba21070ec56e67a340f221bc448e3be/maas-controller/pkg/controller/maas/providers_external.go#L63-L66)).
+- AGC writes the rest. It reconciles both kinds ["into the tenant-local ExtProc overlay, credential projections, and Envoy-owned provider transport"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L21-L23).
+
+### Request path
+
+| Step | Where | What happens |
+|---|---|---|
+| 1 | Gateway, before Kuadrant | A Praxis `ext_proc` server reads the model name from the request body into the header `X-Gateway-Model-Name` ([`configmap.yaml:30-45`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/config/manifests/praxis-extproc/base/config/configmap.yaml#L30-L45)). |
+| 2 | Gateway, Kuadrant | Authorino and Limitador enforce the `AuthPolicy` and the `TokenRateLimitPolicy` that MaaS wrote on the HTTPRoute of the model. |
+| 3 | Gateway, after Kuadrant | A second Praxis `ext_proc` server, one Deployment per tenant, runs `intelligent_route`, the translation filters when translation is enabled, and `credential_inject` ([`extproc.go:562-602`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L562-L602)). The provider is chosen from the `routing-overlay` ConfigMap that AGC publishes. The credential is read from a Secret that the kubelet projects into the pod ([`extproc.go:280-282`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L280-L282)). |
+| 4 | Gateway, Envoy | The filter sets the header `X-AI-Routing-Candidate`, and Envoy selects the route again. A rule of the HTTPRoute `external-model-&lt;model&gt;` matches the header and points at an `ExternalName` Service for the provider ([`reconciler.go:2956-2966`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2956-L2966), [`:2996-2999`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2996-L2999)). |
+| 5 | Gateway, Envoy | Envoy opens the TLS connection to the provider. A `ServiceEntry` makes the host reachable, and a `DestinationRule` sets the TLS mode, the SNI and an optional CA ([`reconciler.go:2813-2856`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/controller/reconciler.go#L2813-L2856)). |
+
+- The provider is chosen at random or by weight. There is no failover: the controller ["does not add controller/ExtProc rollout coordination, health-aware selection, or retries"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/DESIGN.md?plain=1#L61-L63), and the filter ["does not probe upstream health or retry another candidate when a selected upstream fails"](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L224-L225).
+- Praxis never connects to the provider in this setup. It selects the provider, and Envoy forwards the request.
+
+### Who does what, and why
+
+- The user writes the `ExternalProvider`, the `ExternalModel` and the credential Secret, and publishes the model with a `MaaSModelRef`.
+- MaaS writes the `AuthPolicy` and the `TokenRateLimitPolicy` on the route, and takes the status of the `MaaSModelRef` from the route.
+- AGC writes the routing data, the credential projections, the HTTPRoute and the Istio objects.
+- Kuadrant enforces authentication and token limits in the Gateway.
+- Praxis runs as two `ext_proc` servers. One reads the model name, the other chooses the provider, translates and adds the credential.
+- Envoy, configured by Istio, connects to the provider.
+
+## Dependencies on Gateway API and Istio
+
+Every object AGC writes for the transport exists to return the choice of the provider to Envoy, or to let Envoy reach the provider. AFAICT none of them has a function when the proxy opens the connection itself. One upstream cluster per provider in the proxy configuration takes their place.
+
+| Object | Why it exists | Written by |
+|---|---|---|
+| HTTPRoute `external-model-&lt;model&gt;` | It carries the choice of the provider back to Envoy through a header match, and it is the target of the MaaS policies. | AGC |
+| `ExternalName` Service | It gives the HTTPRoute a backend for the provider. | AGC |
+| `ServiceEntry` | It lets Envoy resolve and reach the host of the provider. | AGC |
+| `DestinationRule` | It originates TLS to the provider, with SNI and an optional CA. | AGC |
+| Two `EnvoyFilter` objects | They insert the two `ext_proc` filters around the Kuadrant filter and enable them per route ([`external-model-envoy-filter.yaml:3-66`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/config/manifests/external-model/overlays/odh/external-model-envoy-filter.yaml#L3-L66)). | AGC |
+| `AuthPolicy` and `TokenRateLimitPolicy` | They attach to the HTTPRoute of the model. | MaaS |
+
+## What AGC plans
+
+AGC describes two modes for Praxis ([`praxis-dataplane-evolution.md:15-22`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L15-L22)). In gateway mode, which is the setup above, Praxis is an `ext_proc` side-call and Envoy opens the upstream connection. In standard mode Praxis is the tenant-facing gateway, the AI filters run in-process, and Praxis opens the connection.
+
+- Standard mode is a draft. The document calls it ["Direction of travel from the research spike, not a committed product design"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L133-L134), and says that authentication, quota and token accounting remain open.
+- In that draft Praxis ["opens the connection to the generated KServe Service (or ExternalModel provider) without Envoy or Istio on the inference path"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L136-L140).
+- AGC is named as the component that would ["Compile Gateway / KServe / ExternalModel intent into Praxis runtime config"](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L202).
+- We found no code for standard mode in AGC or in MaaS.
+
+## What Praxis offers today
+
+We checked what Praxis can do for an external provider when it is the proxy and not an `ext_proc` server. Most of the request path exists. Failover and egress through an HTTP proxy do not.
+
+| Capability | State | Detail |
+|---|---|---|
+| Connect to a provider by host name over TLS, with SNI and a CA | Available | An upstream cluster has a CA, a client certificate, an SNI and a verify setting ([`cluster.rs:49-63`](https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/crates/tls/src/config/cluster.rs#L49-L63)). The CA is taken per cluster, globally or from the system trust store ([`tls.md:222-232`](https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/tls.md?plain=1#L222-L232)). |
+| Inject the provider credential | Available | `credential_inject` takes the token from a file, an environment variable or an inline value, as a bearer token or an API key. A file is read again after a Secret rotation ([`credential_inject.md:20-25`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/credential_inject.md?plain=1#L20-L25)). |
+| Translate API formats | Available for some pairs | AGC already uses the filters that translate Chat Completions to the Anthropic API ([`extproc.go:579-586`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/pkg/tenant/extproc.go#L579-L586)). |
+| Choose between providers by weight | Available in one filter | `intelligent_route` supports `weightedRandom` with an overlay ([`intelligent_route.md:201-204`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L201-L204)). `model_to_provider` maps a model to one upstream and has no weight ([`model_to_provider.md:26-31`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/model_to_provider.md?plain=1#L26-L31)). |
+| Fail over to another provider | Missing | `intelligent_route` does not retry another candidate. An experimental `iterative_request_router` for provider failover exists and is off by default ([`build-features.md:166`](https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/build-features.md?plain=1#L166)). |
+| Count tokens from provider responses | Available, the limit is experimental | `token_count` reads usage from streaming and non-streaming responses of five providers ([`token_count.md:10`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/token_count.md?plain=1#L10)). `token_rate_limit` is experimental and off by default ([`token_rate_limit.md:10`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/token_rate_limit.md?plain=1#L10)). |
+| Reach the provider through an HTTP CONNECT proxy | Missing | We found no setting for an upstream proxy. The `forward-proxy` feature is for clients that use Praxis as their proxy, and its runtime is not merged ([`build-features.md:169`](https://github.com/praxis-proxy/praxis/blob/2212314b12a4536774f41ed4e1aec1619d403459/docs/operating/build-features.md?plain=1#L169)). |
+
+- `intelligent_route` selects a cluster and does not define it ([`intelligent_route.md:38-40`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L38-L40)). Every provider needs an upstream cluster in the proxy configuration, and a reload of the overlay cannot add one ([`:626-628`](https://github.com/praxis-proxy/ai/blob/a59c9270258a68c68f45419ef02d3f5a0a195fdd/docs/filters/intelligent_route.md?plain=1#L626-L628)).
+
+## What the Praxis design says
+
+The control-plane design in `gateway-controller` covers external providers with the same two objects it uses for models in the cluster. Neither is implemented ([`#40`](https://github.com/praxis-proxy/gateway-controller/issues/40), [`#42`](https://github.com/praxis-proxy/gateway-controller/issues/42)).
+
+- A `ModelProvider` can name an external upstream URL in place of a Service, with a credential Secret and the header to present it in ([`api-v1alpha1.md:281-294`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L281-L294)).
+- The design maps `ExternalProvider` and `ExternalModel` to `ModelProvider` and `Model` as ["Near 1:1"](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L550), and calls it a candidate for MaaS to delegate. It lists the question as open ([`api.md:621`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md?plain=1#L621)).
+- Weighting and failover between providers are out of scope of the first API version ([`api-v1alpha1.md:386-387`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api-v1alpha1.md?plain=1#L386-L387)).
+
+## Open points
+
+The decision for KServe models has MaaS write the routing into the `Proxy` of the tenant. Nothing we read settles the same for external models. The points below are our reading of what is undefined.
+
+- **Which component writes the routing of external models.** The AGC draft names AGC, the Praxis design suggests that MaaS delegates to `ModelProvider` and `Model`, and the decision covers KServe models only. If MaaS writes the routing of KServe models and AGC that of external models, the `Proxy` of a tenant has two writers.
+- **What MaaS reads for an external model without the HTTPRoute.** The status of the `MaaSModelRef` and the targets of the policies come from that route today.
+- **How the credential reaches the proxy.** Today the kubelet projects the Secret as a file into the `ext_proc` pod. The `Proxy` type offers Secret keys as environment variables only ([`proxy_types.go:41-43`](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/api/proxy/v1alpha1/proxy_types.go#L41-L43)).
+- **How a private CA is trusted.** An `ExternalProvider` defines it in Istio terms, as a Secret in the Gateway namespace or a file mounted in the Gateway ([`externalprovider_types.go:65-69`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/api/inference/v1alpha1/externalprovider_types.go#L65-L69)). Praxis needs the CA as a file in its own pod.
+- **Weights and failover.** Weights between providers work today. The Praxis design leaves them out of the first API version, and failover exists in neither.
+- **How a new provider is added.** It needs a new upstream cluster, so it is a change of the proxy configuration and not only of the routing data.
+- **Token limits.** They are as open for external models as for KServe models, and AGC lists them as open for standard mode ([`praxis-dataplane-evolution.md:203-204`](https://github.com/opendatahub-io/ai-gateway-controller/blob/02aa4430a07c484a76f5dbcb338ebd726fa48863/docs/praxis-dataplane-evolution.md?plain=1#L203-L204)).
+- **Egress through an HTTP proxy.** Praxis has no upstream proxy setting, which matters for clusters that reach providers only through a proxy.
+
+## Not verified
+
+The findings are based on reading code and design documents. The following was not verified.
+
+- Nothing was run on a cluster.
+- The two Praxis repositories were read at [`a59c927`](https://github.com/praxis-proxy/ai/commit/a59c9270258a68c68f45419ef02d3f5a0a195fdd) and [`2212314`](https://github.com/praxis-proxy/praxis/commit/2212314b12a4536774f41ed4e1aec1619d403459). Both have moved since, so a capability listed as missing may have been added.
+- That users write the `ExternalProvider` and the `ExternalModel` is inferred. We found no controller that creates them, apart from a migration of the older kind.
+- How Kuadrant reads the token usage from the response of a provider.
+- That no upstream proxy setting exists in Praxis is the result of a search, not a statement of the project.
+</pre>
+</div>
+
+<script>
+  (function () {
+    var control = document.querySelector(".view");
+    if (!control) return;
+    var page = document.querySelector(".page");
+    var view = document.querySelector(".md-view");
+    var source = view.querySelector(".md-source");
+    var status = view.querySelector(".md-status");
+    function show(name) {
+      var markdown = name === "markdown";
+      page.hidden = markdown;
+      view.hidden = !markdown;
+      control.querySelectorAll("input").forEach(function (input) { input.checked = input.value === name; });
+      try { history.replaceState(null, "", markdown ? "#markdown" : location.pathname + location.search); } catch (e) {}
+    }
+    control.querySelectorAll("input").forEach(function (input) {
+      input.addEventListener("change", function () { show(input.value); });
+    });
+    view.querySelector(".md-copy").addEventListener("click", function () {
+      function done(ok) { status.textContent = ok ? "Copied" : "Select the text and copy it"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(source.textContent).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+      var range = document.createRange();
+      range.selectNodeContents(source);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      done(ok);
+    });
+    control.hidden = false;
+    show(location.hash === "#markdown" ? "markdown" : "page");
+  })();
+</script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>

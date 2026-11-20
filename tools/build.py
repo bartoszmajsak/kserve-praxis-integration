@@ -68,6 +68,11 @@ PAGES = (
         "between MaaS and KServe, and what Praxis supports of Gateway API.",
     ),
     Page(
+        "external-models",
+        "How MaaS external models are routed today, what Praxis offers when it connects to the provider itself, "
+        "and what is undefined. It is a MaaS concern and not part of the decision.",
+    ),
+    Page(
         "migration",
         "Work in progress: the stages in which a tenant can move to Praxis, what each stage depends on, what can start "
         "now in MaaS and KServe, and how each stage is rolled back.",
