@@ -145,6 +145,81 @@ def modelprovider_ownership():
     return f
 
 
+# --- migration -------------------------------------------------------------------
+
+@figure("migration-stages", "Client request path in the four migration stages")
+def migration_stages():
+    # Four columns with the same slots, so that a layer that is added or removed shows as
+    # a filled or an empty slot at the same height.
+    f = Fig(
+        "f3", 1040, 612,
+        "Client request path in the four migration stages. In stage 1 and stage 2 the request goes through the "
+        "tenant Gateway, Kuadrant and the per-model HTTPRoute to the pods. In stage 2 a Praxis proxy and a "
+        "forwarding route exist, and only test traffic reaches the proxy. In stage 3 the per-model routes are "
+        "removed and the forwarding route sends model requests to the Praxis proxy. In stage 4 the Kuadrant "
+        "policies are removed from the Gateway.",
+    )
+    COL, GW, TW = 256, 206, 186
+    stages = (
+        ("1. PREPARE", "gw"),
+        ("2. PRAXIS NEXT TO THE ROUTES", "gw"),
+        ("3. CUT-OVER OF A TENANT", "px"),
+        ("4. CLEAN-UP", "px"),
+    )
+    for i, (title, accent) in enumerate(stages):
+        x0 = 14 + i * COL
+        cx, x, bypass = x0 + GW / 2, x0 + 10, x0 + 224
+        praxis, cut_over = i >= 1, i >= 2
+
+        f.title(x0, 20, title, accent)
+        f.plain(cx - 50, 34, 100, 32, "Client")
+        f.edge([(cx, 66), (cx, 96)])
+
+        f.group(x0, 96, GW, 214, "Tenant Gateway (Istio)", "gw")
+        if i < 3:
+            f.tile(x, 120, TW, 54, "Kuadrant", None,
+                   ["gateway-level policies" if cut_over else "auth and token limits"], icon="shield")
+        else:
+            f.text(cx, 151, "Kuadrant policies removed", anchor="middle")
+        if cut_over:
+            f.text(cx, 213, "per-model routes removed", anchor="middle")
+        else:
+            f.tile(x, 182, TW, 54, "HTTPRoute per model", None, ["serves every client request"],
+                   accent="warn", icon="route")
+        if praxis:
+            f.tile(x, 244, TW, 54, "Forwarding route", None,
+                   ["all model requests" if cut_over else "outranked by model routes"], icon="route")
+
+        if praxis:
+            f.group(x0, 346, GW, 152, "Praxis proxy", "px")
+            f.tile(x, 370, TW, 54, "Policy slot", None, ["auth and token limits"], icon="shield")
+            f.tile(x, 432, TW, 54, "Routing slot", None, ["backend by model name"],
+                   accent="warn" if cut_over else "", icon="route")
+        else:
+            f.text(cx, 425, "No Praxis objects yet", anchor="middle")
+
+        if cut_over:
+            f.edge([(cx, 310), (cx, 346)])
+            f.edge([(cx, 498), (cx, 546)])
+        else:
+            # The request leaves the Gateway at the per-model route and passes the proxy by.
+            f.edge([(x0 + GW, 209), (bypass, 209), (bypass, 546)])
+            f.pill(bypass, 328, "request")
+            if praxis:
+                f.edge([(cx, 498), (cx, 546)], dash=True)
+                f.pill(cx, 522, "test traffic")
+
+        f.tile(x0, 546, 240, 54, "EPP and vLLM pods", None, ["the same pods in every stage"], icon="pool")
+
+    f.legend([
+        ("line", "", "client request"),
+        ("dash", "", "test traffic, addressed to the proxy directly"),
+        ("tile", "warn", "carries the per-model routing decision"),
+        ("group", "", "one proxy and the layers inside it"),
+    ])
+    return f
+
+
 # --- cr-relationships ------------------------------------------------------------
 
 @figure("relationships-today", "Custom resources today, on Gateway API with Kuadrant")

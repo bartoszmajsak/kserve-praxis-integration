@@ -1,0 +1,230 @@
+<svg viewBox="0 0 1040 682" role="img" aria-label="Client request path in the four migration stages. In stage 1 and stage 2 the request goes through the tenant Gateway, Kuadrant and the per-model HTTPRoute to the pods. In stage 2 a Praxis proxy and a forwarding route exist, and only test traffic reaches the proxy. In stage 3 the per-model routes are removed and the forwarding route sends model requests to the Praxis proxy. In stage 4 the Kuadrant policies are removed from the Gateway." xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="f3-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="f3-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+<marker id="f3-ah-px" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah px" d="M0 0 L10 5 L0 10 z"/></marker>
+<filter id="f3-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+<symbol id="f3-i-hex" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l6 3.5v7L9 16l-6-3.5v-7z"/><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"/></symbol>
+<symbol id="f3-i-shield" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5.5 2v4.6c0 3.3-2.3 5.9-5.5 7.4-3.2-1.5-5.5-4.1-5.5-7.4V4z"/><path d="M6.6 9l1.7 1.7 3.2-3.4"/></symbol>
+<symbol id="f3-i-route" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="13.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="13.5" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 11.5V10c0-2 1.3-3 3.3-3h2.4c1.4 0 2.3-.4 2.9-1.1"/></symbol>
+<symbol id="f3-i-pool" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="8.5" height="8.5" rx="1.5"/><path d="M6.5 6V4.5A1.5 1.5 0 0 1 8 3h5.5A1.5 1.5 0 0 1 15 4.5V10a1.5 1.5 0 0 1-1.5 1.5h-2"/></symbol>
+<symbol id="f3-i-cr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="13" height="13" rx="2.5"/><text x="9" y="11.6" text-anchor="middle" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">CR</text></symbol>
+<symbol id="f3-i-ext" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></symbol>
+<symbol id="f3-i-ctrl" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a5 5 0 1 1-1.7-3.75"/><path d="M12.6 2.6v2.9H9.7"/></symbol>
+</defs>
+<style>
+.d-tile { fill: #ffffff; }
+.d-tile-b { fill: none; stroke: #8492a2; stroke-width: 1.2; }
+.d-tile-b.gw { stroke: #2459a6; stroke-width: 1.6; }
+.d-tile-b.px { stroke: #0b7d60; stroke-width: 1.6; }
+.d-tile-b.warn { stroke: #b0401c; stroke-width: 1.6; }
+.d-head { fill: #eaeef3; }
+.d-head.gw { fill: #e3e9f3; }
+.d-head.px { fill: #dfeeea; }
+.d-head.warn { fill: #f5e6e1; }
+.d-kind { fill: #16202b; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12.5px; font-weight: 600; }
+.d-kind.gw { fill: #2459a6; } .d-kind.px { fill: #0b7d60; } .d-kind.warn { fill: #b0401c; }
+.d-own { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; }
+.d-ico { color: #586574; }
+.d-ico.gw { color: #2459a6; } .d-ico.px { color: #0b7d60; } .d-ico.warn { color: #b0401c; }
+.d-grp { fill: #e3e8ed; stroke: #8492a2; stroke-width: 1.2; stroke-dasharray: 7 4; }
+.d-grp.gw { fill: #dee5ef; stroke: #2459a6; }
+.d-grp.px { fill: #dce8e9; stroke: #0b7d60; }
+.d-tab { fill: #8492a2; } .d-tab.gw { fill: #2459a6; } .d-tab.px { fill: #0b7d60; }
+.d-tabt { fill: #ffffff; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 600; }
+.d-pill { fill: #ffffff; stroke: #d6dce4; stroke-width: 1; }
+.d-pill.warn { stroke: #b0401c; } .d-pill.px { stroke: #0b7d60; }
+.d-pillt { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 10.5px; font-weight: 500; }
+.d-pillt.warn { fill: #b0401c; } .d-pillt.px { fill: #0b7d60; }
+.d-t { fill: #16202b; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 13px; font-weight: 600; }
+.d-s { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; }
+.d-moved { fill: #b0401c; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11.5px; font-weight: 600; }
+.d-title { font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+.d-title.gw { fill: #2459a6; } .d-title.px { fill: #0b7d60; } .d-title.warn { fill: #b0401c; }
+.d-edge { stroke: #16202b; stroke-width: 1.3; fill: none; }
+.d-edge.warn { stroke: #b0401c; stroke-width: 2; }
+.d-edge.px { stroke: #0b7d60; stroke-width: 2; }
+.d-edge.dash { stroke-dasharray: 5 4; }
+.d-ah { fill: #16202b; } .d-ah.warn { fill: #b0401c; } .d-ah.px { fill: #0b7d60; }
+.d-rule { stroke: #d6dce4; stroke-width: 1; }
+.d-legend { fill: #ffffff; stroke: #d6dce4; stroke-width: 1; }
+.d-lg { fill: #586574; font-family: 'Inter','Helvetica Neue',Arial,sans-serif; font-size: 11px; }
+</style>
+<rect width="1040" height="682" fill="#ffffff"/>
+<rect class="d-grp px" x="782" y="346" width="206" height="152" rx="12"/>
+<rect class="d-grp gw" x="782" y="96" width="206" height="214" rx="12"/>
+<rect class="d-grp px" x="526" y="346" width="206" height="152" rx="12"/>
+<rect class="d-grp gw" x="526" y="96" width="206" height="214" rx="12"/>
+<rect class="d-grp px" x="270" y="346" width="206" height="152" rx="12"/>
+<rect class="d-grp gw" x="270" y="96" width="206" height="214" rx="12"/>
+<rect class="d-grp gw" x="14" y="96" width="206" height="214" rx="12"/>
+<polyline class="d-edge " points="117.0,66 117.0,96" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="220,209 238,209 238,546" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="373.0,66 373.0,96" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="476,209 494,209 494,546" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge  dash" points="373.0,498 373.0,546" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="629.0,66 629.0,96" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="629.0,310 629.0,346" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="629.0,498 629.0,546" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="885.0,66 885.0,96" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="885.0,310 885.0,346" marker-end="url(#f3-ah)"/>
+<polyline class="d-edge " points="885.0,498 885.0,546" marker-end="url(#f3-ah)"/>
+<text class="d-title gw" x="14" y="20">1. PREPARE</text>
+<rect class="d-tile" x="67.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+<rect class="d-tile-b" x="67.0" y="34" width="100" height="32" rx="8"/>
+<text class="d-t" x="117.0" y="54.5" text-anchor="middle">Client</text>
+<rect class="d-tab gw" x="28" y="86" width="161" height="20" rx="5"/>
+<text class="d-tabt" x="108.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+<rect class="d-tile" x="24" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M24.6 144V128Q24.6 120.6 32 120.6H202Q209.4 120.6 209.4 128V144Z"/>
+<rect class="d-tile-b " x="24" y="120" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="32" y="123" width="18" height="18"/>
+<text class="d-kind " x="56" y="136.5">Kuadrant</text>
+<text class="d-s" x="36" y="162">auth and token limits</text>
+<rect class="d-tile" x="24" y="182" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head warn" d="M24.6 206V190Q24.6 182.6 32 182.6H202Q209.4 182.6 209.4 190V206Z"/>
+<rect class="d-tile-b warn" x="24" y="182" width="186" height="54" rx="8"/>
+<use class="d-ico warn" href="#f3-i-route" x="32" y="185" width="18" height="18"/>
+<text class="d-kind warn" x="56" y="198.5">HTTPRoute per model</text>
+<text class="d-s" x="36" y="224">serves every client request</text>
+<text class="d-s" x="117.0" y="425" text-anchor="middle">No Praxis objects yet</text>
+<rect class="d-pill " x="209.5" y="319" width="57" height="18" rx="9"/>
+<text class="d-pillt " x="238" y="331.6" text-anchor="middle">request</text>
+<rect class="d-tile" x="14" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M14.6 570V554Q14.6 546.6 22 546.6H246Q253.4 546.6 253.4 554V570Z"/>
+<rect class="d-tile-b " x="14" y="546" width="240" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-pool" x="22" y="549" width="18" height="18"/>
+<text class="d-kind " x="46" y="562.5">EPP and vLLM pods</text>
+<text class="d-s" x="26" y="588">the same pods in every stage</text>
+<text class="d-title gw" x="270" y="20">2. PRAXIS NEXT TO THE ROUTES</text>
+<rect class="d-tile" x="323.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+<rect class="d-tile-b" x="323.0" y="34" width="100" height="32" rx="8"/>
+<text class="d-t" x="373.0" y="54.5" text-anchor="middle">Client</text>
+<rect class="d-tab gw" x="284" y="86" width="161" height="20" rx="5"/>
+<text class="d-tabt" x="364.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+<rect class="d-tile" x="280" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M280.6 144V128Q280.6 120.6 288 120.6H458Q465.4 120.6 465.4 128V144Z"/>
+<rect class="d-tile-b " x="280" y="120" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="288" y="123" width="18" height="18"/>
+<text class="d-kind " x="312" y="136.5">Kuadrant</text>
+<text class="d-s" x="292" y="162">auth and token limits</text>
+<rect class="d-tile" x="280" y="182" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head warn" d="M280.6 206V190Q280.6 182.6 288 182.6H458Q465.4 182.6 465.4 190V206Z"/>
+<rect class="d-tile-b warn" x="280" y="182" width="186" height="54" rx="8"/>
+<use class="d-ico warn" href="#f3-i-route" x="288" y="185" width="18" height="18"/>
+<text class="d-kind warn" x="312" y="198.5">HTTPRoute per model</text>
+<text class="d-s" x="292" y="224">serves every client request</text>
+<rect class="d-tile" x="280" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M280.6 268V252Q280.6 244.6 288 244.6H458Q465.4 244.6 465.4 252V268Z"/>
+<rect class="d-tile-b " x="280" y="244" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-route" x="288" y="247" width="18" height="18"/>
+<text class="d-kind " x="312" y="260.5">Forwarding route</text>
+<text class="d-s" x="292" y="286">outranked by model routes</text>
+<rect class="d-tab px" x="284" y="336" width="98" height="20" rx="5"/>
+<text class="d-tabt" x="333.0" y="350" text-anchor="middle">Praxis proxy</text>
+<rect class="d-tile" x="280" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M280.6 394V378Q280.6 370.6 288 370.6H458Q465.4 370.6 465.4 378V394Z"/>
+<rect class="d-tile-b " x="280" y="370" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="288" y="373" width="18" height="18"/>
+<text class="d-kind " x="312" y="386.5">Policy slot</text>
+<text class="d-s" x="292" y="412">auth and token limits</text>
+<rect class="d-tile" x="280" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M280.6 456V440Q280.6 432.6 288 432.6H458Q465.4 432.6 465.4 440V456Z"/>
+<rect class="d-tile-b " x="280" y="432" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-route" x="288" y="435" width="18" height="18"/>
+<text class="d-kind " x="312" y="448.5">Routing slot</text>
+<text class="d-s" x="292" y="474">backend by model name</text>
+<rect class="d-pill " x="465.5" y="319" width="57" height="18" rx="9"/>
+<text class="d-pillt " x="494" y="331.6" text-anchor="middle">request</text>
+<rect class="d-pill " x="330.5" y="513" width="85" height="18" rx="9"/>
+<text class="d-pillt " x="373.0" y="525.6" text-anchor="middle">test traffic</text>
+<rect class="d-tile" x="270" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M270.6 570V554Q270.6 546.6 278 546.6H502Q509.4 546.6 509.4 554V570Z"/>
+<rect class="d-tile-b " x="270" y="546" width="240" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-pool" x="278" y="549" width="18" height="18"/>
+<text class="d-kind " x="302" y="562.5">EPP and vLLM pods</text>
+<text class="d-s" x="282" y="588">the same pods in every stage</text>
+<text class="d-title px" x="526" y="20">3. CUT-OVER OF A TENANT</text>
+<rect class="d-tile" x="579.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+<rect class="d-tile-b" x="579.0" y="34" width="100" height="32" rx="8"/>
+<text class="d-t" x="629.0" y="54.5" text-anchor="middle">Client</text>
+<rect class="d-tab gw" x="540" y="86" width="161" height="20" rx="5"/>
+<text class="d-tabt" x="620.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+<rect class="d-tile" x="536" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M536.6 144V128Q536.6 120.6 544 120.6H714Q721.4 120.6 721.4 128V144Z"/>
+<rect class="d-tile-b " x="536" y="120" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="544" y="123" width="18" height="18"/>
+<text class="d-kind " x="568" y="136.5">Kuadrant</text>
+<text class="d-s" x="548" y="162">gateway-level policies</text>
+<text class="d-s" x="629.0" y="213" text-anchor="middle">per-model routes removed</text>
+<rect class="d-tile" x="536" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M536.6 268V252Q536.6 244.6 544 244.6H714Q721.4 244.6 721.4 252V268Z"/>
+<rect class="d-tile-b " x="536" y="244" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-route" x="544" y="247" width="18" height="18"/>
+<text class="d-kind " x="568" y="260.5">Forwarding route</text>
+<text class="d-s" x="548" y="286">all model requests</text>
+<rect class="d-tab px" x="540" y="336" width="98" height="20" rx="5"/>
+<text class="d-tabt" x="589.0" y="350" text-anchor="middle">Praxis proxy</text>
+<rect class="d-tile" x="536" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M536.6 394V378Q536.6 370.6 544 370.6H714Q721.4 370.6 721.4 378V394Z"/>
+<rect class="d-tile-b " x="536" y="370" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="544" y="373" width="18" height="18"/>
+<text class="d-kind " x="568" y="386.5">Policy slot</text>
+<text class="d-s" x="548" y="412">auth and token limits</text>
+<rect class="d-tile" x="536" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head warn" d="M536.6 456V440Q536.6 432.6 544 432.6H714Q721.4 432.6 721.4 440V456Z"/>
+<rect class="d-tile-b warn" x="536" y="432" width="186" height="54" rx="8"/>
+<use class="d-ico warn" href="#f3-i-route" x="544" y="435" width="18" height="18"/>
+<text class="d-kind warn" x="568" y="448.5">Routing slot</text>
+<text class="d-s" x="548" y="474">backend by model name</text>
+<rect class="d-tile" x="526" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M526.6 570V554Q526.6 546.6 534 546.6H758Q765.4 546.6 765.4 554V570Z"/>
+<rect class="d-tile-b " x="526" y="546" width="240" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-pool" x="534" y="549" width="18" height="18"/>
+<text class="d-kind " x="558" y="562.5">EPP and vLLM pods</text>
+<text class="d-s" x="538" y="588">the same pods in every stage</text>
+<text class="d-title px" x="782" y="20">4. CLEAN-UP</text>
+<rect class="d-tile" x="835.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+<rect class="d-tile-b" x="835.0" y="34" width="100" height="32" rx="8"/>
+<text class="d-t" x="885.0" y="54.5" text-anchor="middle">Client</text>
+<rect class="d-tab gw" x="796" y="86" width="161" height="20" rx="5"/>
+<text class="d-tabt" x="876.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+<text class="d-s" x="885.0" y="151" text-anchor="middle">Kuadrant policies removed</text>
+<text class="d-s" x="885.0" y="213" text-anchor="middle">per-model routes removed</text>
+<rect class="d-tile" x="792" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M792.6 268V252Q792.6 244.6 800 244.6H970Q977.4 244.6 977.4 252V268Z"/>
+<rect class="d-tile-b " x="792" y="244" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-route" x="800" y="247" width="18" height="18"/>
+<text class="d-kind " x="824" y="260.5">Forwarding route</text>
+<text class="d-s" x="804" y="286">all model requests</text>
+<rect class="d-tab px" x="796" y="336" width="98" height="20" rx="5"/>
+<text class="d-tabt" x="845.0" y="350" text-anchor="middle">Praxis proxy</text>
+<rect class="d-tile" x="792" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M792.6 394V378Q792.6 370.6 800 370.6H970Q977.4 370.6 977.4 378V394Z"/>
+<rect class="d-tile-b " x="792" y="370" width="186" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-shield" x="800" y="373" width="18" height="18"/>
+<text class="d-kind " x="824" y="386.5">Policy slot</text>
+<text class="d-s" x="804" y="412">auth and token limits</text>
+<rect class="d-tile" x="792" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head warn" d="M792.6 456V440Q792.6 432.6 800 432.6H970Q977.4 432.6 977.4 440V456Z"/>
+<rect class="d-tile-b warn" x="792" y="432" width="186" height="54" rx="8"/>
+<use class="d-ico warn" href="#f3-i-route" x="800" y="435" width="18" height="18"/>
+<text class="d-kind warn" x="824" y="448.5">Routing slot</text>
+<text class="d-s" x="804" y="474">backend by model name</text>
+<rect class="d-tile" x="782" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+<path class="d-head " d="M782.6 570V554Q782.6 546.6 790 546.6H1014Q1021.4 546.6 1021.4 554V570Z"/>
+<rect class="d-tile-b " x="782" y="546" width="240" height="54" rx="8"/>
+<use class="d-ico " href="#f3-i-pool" x="790" y="549" width="18" height="18"/>
+<text class="d-kind " x="814" y="562.5">EPP and vLLM pods</text>
+<text class="d-s" x="794" y="588">the same pods in every stage</text>
+<rect class="d-legend" x="16" y="616" width="1008" height="54" rx="8"/>
+<line class="d-edge " x1="32" y1="632.0" x2="62" y2="632.0" marker-end="url(#f3-ah)"/>
+<text class="d-lg" x="70" y="635.8">client request</text>
+<line class="d-edge  dash" x1="178.60000000000002" y1="632.0" x2="208.60000000000002" y2="632.0" marker-end="url(#f3-ah)"/>
+<text class="d-lg" x="216.60000000000002" y="635.8">test traffic, addressed to the proxy directly</text>
+<rect class="d-tile" x="508.1" y="626.0" width="18" height="12" rx="3"/>
+<rect class="d-tile-b warn" x="508.1" y="626.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="534.1" y="635.8">carries the per-model routing decision</text>
+<rect class="d-grp " x="32" y="648.0" width="18" height="12" rx="3"/>
+<text class="d-lg" x="58" y="657.8">one proxy and the layers inside it</text>
+</svg>

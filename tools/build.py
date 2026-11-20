@@ -51,7 +51,18 @@ PAGES = (
         "Which custom resource references which, which one owns which, and which controller writes "
         "each, today and in three options for routing a model through Praxis.",
     ),
+    Page(
+        "migration",
+        "The stages in which a tenant can move to Praxis, what each stage depends on, what can start "
+        "now in MaaS and KServe, and how each stage is rolled back.",
+    ),
 )
+
+# A link from one page to another is relative in the sources, which is what site/ needs.
+# The Markdown gets the .md name. The fragments under build/artifact/ are hosted one per
+# address, so there the link points at the published site.
+SITE_URL = "https://bartoszmajsak.github.io/kserve-praxis-integration/"
+PAGE_LINK = re.compile(r'href="([a-z0-9-]+)\.html"')
 
 PLACEHOLDER = re.compile(r"^([ \t]*)<!-- figure: ([a-z0-9-]+) -->[ \t]*$", flags=re.M)
 BODY = '<div class="page">'
@@ -117,7 +128,9 @@ def render():
         inlined = PLACEHOLDER.sub(lambda m: figs[m.group(2)].inline(m.group(1)), src.text)
         require("<!-- figure:" not in inlined, f"{page.name}: a figure placeholder has to be on a line of its own")
 
-        out[f"build/artifact/{page.name}.html"] = inlined
+        for target in PAGE_LINK.findall(src.body):
+            require(target in sources, f"{page.name}: link to {target}.html, which is not a page")
+        out[f"build/artifact/{page.name}.html"] = PAGE_LINK.sub(lambda m: f'href="{SITE_URL}{m.group(1)}.html"', inlined)
         out[f"site/{page.name}.html"] = site_html.document(
             src.title, page.description, src.font_links, src.css, inlined[inlined.index(BODY):],
             links, f"{page.name}.html",

@@ -8,7 +8,7 @@ Moving the data plane from Gateway API on Istio to Praxis changes how a KServe `
 |---|---|---|
 | Problem | MaaS and KServe integrate through the HTTPRoute | MaaS looks up the route, attaches its policies to it and derives the tenant from it. Praxis removes the per-model route. |
 | What can help | A status contract, and MaaS owns the provider | KServe publishes the backend, the port, the model names and `Ready` in the service status, with or without a route. MaaS creates the `ModelProvider` from it. |
-| Migration | Route and provider in parallel | Both can point at the same backend, so the cutover can overlap. MaaS has to stop depending on the HTTPRoute first, and TLS to the EPP blocks the overlap today. |
+| Migration | In stages, per tenant | MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis. |
 
 ## Praxis in the request path
 
@@ -84,7 +84,7 @@ Dependencies run in one direction. `gateway-controller` reads the objects MaaS c
 - Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.
 - No cross-namespace writes by KServe. The Praxis design places the provider in the tenant namespace, which MaaS manages.
 - Several tenants per service need no extra API. One service can be published to several tenants today, with one `MaaSModelRef` each, which gives one provider per tenant.
-- Incremental migration. The route and the provider can reference the same backend, so a model is switched by creating the provider and rolled back by deleting it.
+- Staged migration. The route and the provider can reference the same backend, so the provider can be created and tested before the route is removed.
 - It follows existing practice. MaaS already reads `status.router.scheduler.inferencePool` and writes an `InferenceObjective` per pool, and the Praxis design has the MaaS controller generate `Model` and `ModelProvider` from a `MaaSModelRef` ([`api.md`, section 9.1](https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md#91-how-maas-crds-lower-onto-the-ai-gateway-layer)).
 
 ### Costs and open points
@@ -177,22 +177,7 @@ The goal is that users and the dashboard notice nothing. While the route and the
 
 ## Migration
 
-The migration can be incremental. The route and the provider can point at the same backend, so from step 3 both paths serve traffic and models can move one at a time.
-
-| Step | Who | What changes | Traffic | Rollback |
-|---|---|---|---|---|
-| 0 | | Starting point: the service has a route on the tenant Gateway. | Istio | |
-| 1 | MaaS, KServe | MaaS stops depending on the HTTPRoute. KServe ships the status changes above. | Istio | None needed |
-| 2 | MaaS | Tenant gets a Praxis `Proxy` and `Policy`. | Istio | Delete them |
-| 3 | MaaS | MaaS creates the `ModelProvider` on the same pool or Service. The route stays. | Both paths can serve | Delete the provider |
-| 4 | Platform | Clients are switched to the Praxis endpoint. | Praxis | Switch clients back |
-| 5 | Platform | The tenant Gateway is marked so that KServe stops rendering routes for it. KServe deletes the HTTPRoute, and the service spec stays as it is. | Praxis | Remove the mark |
-
-- Step 1 is required. On today's MaaS code, removing the route sends `MaaSModelRef` to `Pending`, deletes the per-model rate limit policy (the route owns it), leaves MaaS unable to find the model's tenant, and makes Grid stop publishing the provider.
-- Step 3 is blocked by TLS to the EPP. During the overlap Istio and Praxis call the same EPP. Its TLS flags are controlled by a cluster-wide KServe setting, and AFAICT the Praxis `ext_proc` client has no TLS support.
-- If the tenant Gateway stays in front and forwards to Praxis, its gateway-level `AuthPolicy` and default-deny rate limit apply to the forwarded traffic as well.
-- The model ID is a contract. Clients send the name MaaS publishes today, so `publishedName` has to equal it.
-- The Praxis side is not implemented yet. There is no `ModelProvider` type and no proxy rendering, and the EPP client is off in published images. The [`v1.0.0` milestone](https://github.com/praxis-proxy/gateway-controller/milestone/1) is due 2027-01-20.
+A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in [Praxis migration](migration.md).
 
 ## Not verified
 

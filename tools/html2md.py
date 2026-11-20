@@ -94,7 +94,10 @@ def inline(node):
                 raise unknown(child, "markup inside <code>")
             parts.append(code("".join(child.children)))
         elif child.tag == "a":
-            parts.append(f"[{inline(child)}]({child.attrs.get('href', '')})")
+            href = child.attrs.get("href", "")
+            if re.fullmatch(r"[a-z0-9-]+\.html", href):  # another page of this repository
+                href = href[:-len("html")] + "md"
+            parts.append(f"[{inline(child)}]({href})")
         elif child.tag == "span" and child.classes & DECORATIVE:
             continue
         elif child.tag == "span" and not child.classes:

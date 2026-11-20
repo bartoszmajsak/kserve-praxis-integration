@@ -49,6 +49,7 @@ TOKENS = {
         "warn": ("#c0352b", "#ff8a80"),
     },
 }
+TOKENS["migration"] = TOKENS["ingress-paths"]  # same style block, same accents
 
 MARKS = "/* diagram marks"  # the diagram rules of a page start at this comment
 

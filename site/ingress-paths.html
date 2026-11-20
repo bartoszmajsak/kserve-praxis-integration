@@ -167,6 +167,7 @@
     <a href="index.html">Overview</a>
     <a href="ingress-paths.html" aria-current="page">Praxis ingress paths</a>
     <a href="cr-relationships.html">Praxis CR relationships</a>
+    <a href="migration.html">Praxis migration</a>
   </nav>
   <div class="theme" role="radiogroup" aria-label="Theme" hidden>
     <label><input type="radio" name="theme" value="system"><span>System</span></label>
@@ -196,8 +197,8 @@
   </div>
   <div>
     <span class="q">Migration</span>
-    <span class="a">Route and provider in parallel</span>
-    <p>Both can point at the same backend, so the cutover can overlap. MaaS has to stop depending on the HTTPRoute first, and TLS to the EPP blocks the overlap today.</p>
+    <span class="a">In stages, per tenant</span>
+    <p>MaaS and KServe can prepare now. The cut-over moves a tenant at a time and waits on proxy deployment, the EPP client and the policy engine in Praxis.</p>
   </div>
 </div>
 
@@ -539,7 +540,7 @@
       <li>Dependencies in one direction. KServe needs no tenant information, creates no Praxis object and does not depend on a Praxis CRD being installed, so upstream KServe stays vendor-neutral.</li>
       <li>No cross-namespace writes by KServe. The Praxis design places the provider in the tenant namespace, which MaaS manages.</li>
       <li>Several tenants per service need no extra API. One service can be published to several tenants today, with one <code>MaaSModelRef</code> each, which gives one provider per tenant.</li>
-      <li>Incremental migration. The route and the provider can reference the same backend, so a model is switched by creating the provider and rolled back by deleting it.</li>
+      <li>Staged migration. The route and the provider can reference the same backend, so the provider can be created and tested before the route is removed.</li>
       <li>It follows existing practice. MaaS already reads <code>status.router.scheduler.inferencePool</code> and writes an <code>InferenceObjective</code> per pool, and the Praxis design has the MaaS controller generate <code>Model</code> and <code>ModelProvider</code> from a <code>MaaSModelRef</code> (<a href="https://github.com/praxis-proxy/gateway-controller/blob/f6a12554d9294130010ed16abea775657914bb6f/docs/design/api.md#91-how-maas-crds-lower-onto-the-ai-gateway-layer" target="_blank" rel="noopener"><code>api.md</code>, section 9.1</a>).</li>
     </ul>
     <h3>Costs and open points</h3>
@@ -674,29 +675,7 @@
 <section>
   <div class="prose">
     <h2>Migration</h2>
-    <p>The migration can be incremental. The route and the provider can point at the same backend, so from step 3 both paths serve traffic and models can move one at a time.</p>
-  </div>
-  <div class="tbl">
-    <table>
-      <thead><tr><th>Step</th><th>Who</th><th>What changes</th><th>Traffic</th><th>Rollback</th></tr></thead>
-      <tbody>
-        <tr><td class="num">0</td><td></td><td>Starting point: the service has a route on the tenant Gateway.</td><td>Istio</td><td></td></tr>
-        <tr><td class="num">1</td><td>MaaS, KServe</td><td>MaaS stops depending on the HTTPRoute. KServe ships the status changes above.</td><td>Istio</td><td>None needed</td></tr>
-        <tr><td class="num">2</td><td>MaaS</td><td>Tenant gets a Praxis <code>Proxy</code> and <code>Policy</code>.</td><td>Istio</td><td>Delete them</td></tr>
-        <tr><td class="num">3</td><td>MaaS</td><td>MaaS creates the <code>ModelProvider</code> on the same pool or Service. The route stays.</td><td>Both paths can serve</td><td>Delete the provider</td></tr>
-        <tr><td class="num">4</td><td>Platform</td><td>Clients are switched to the Praxis endpoint.</td><td>Praxis</td><td>Switch clients back</td></tr>
-        <tr><td class="num">5</td><td>Platform</td><td>The tenant Gateway is marked so that KServe stops rendering routes for it. KServe deletes the HTTPRoute, and the service spec stays as it is.</td><td>Praxis</td><td>Remove the mark</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="prose">
-    <ul>
-      <li>Step 1 is required. On today's MaaS code, removing the route sends <code>MaaSModelRef</code> to <code>Pending</code>, deletes the per-model rate limit policy (the route owns it), leaves MaaS unable to find the model's tenant, and makes Grid stop publishing the provider.</li>
-      <li>Step 3 is blocked by TLS to the EPP. During the overlap Istio and Praxis call the same EPP. Its TLS flags are controlled by a cluster-wide KServe setting, and AFAICT the Praxis <code>ext_proc</code> client has no TLS support.</li>
-      <li>If the tenant Gateway stays in front and forwards to Praxis, its gateway-level <code>AuthPolicy</code> and default-deny rate limit apply to the forwarded traffic as well.</li>
-      <li>The model ID is a contract. Clients send the name MaaS publishes today, so <code>publishedName</code> has to equal it.</li>
-      <li>The Praxis side is not implemented yet. There is no <code>ModelProvider</code> type and no proxy rendering, and the EPP client is off in published images. The <a href="https://github.com/praxis-proxy/gateway-controller/milestone/1" target="_blank" rel="noopener"><code>v1.0.0</code> milestone</a> is due 2027-01-20.</li>
-    </ul>
+    <p>A tenant can move in stages, with the tenant Gateway kept as the ingress. The preparation in MaaS and KServe can start now, and the cut-over waits on work in Praxis. The stages, what each of them depends on and how each is rolled back are described in <a href="migration.html">Praxis migration</a>.</p>
   </div>
 </section>
 

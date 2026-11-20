@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praxis migration</title>
+<meta name="description" content="The stages in which a tenant can move to Praxis, what each stage depends on, what can start now in MaaS and KServe, and how each stage is rolled back.">
+<script>
+  (function () {
+    try {
+      var theme = localStorage.getItem("kserve-praxis-integration:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  /* Layout: one reading column, figures and tables may run wider inside their own scrollers. */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --actor: #eaeef3;
+    --fg: #16202b;
+    --muted: #586574;
+    --line: #d6dce4;
+    --line-strong: #8492a2;
+    --gw: #2459a6;      /* Gateway API path */
+    --px: #0b7d60;      /* Praxis path */
+    --warn: #b0401c;    /* the contested or moved piece */
+    --code-bg: #e9edf2;
+    --canvas: #eef1f5;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+      --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+      --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141a; --panel: #161d25; --actor: #202a35; --fg: #e5eaf0; --muted: #9ba8b6;
+    --line: #2a3541; --line-strong: #6b7a8b; --gw: #78aef0; --px: #4ecba6; --warn: #f28b60;
+    --code-bg: #202a35; --canvas: #121920; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 44px;
+  }
+  .prose { max-width: 720px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  header.prose { gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 15px; margin: 0; font-weight: 700; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .lede { font-size: 18px; color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .src { color: var(--muted); font-size: 13px; }
+  .who { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 40px; margin-top: 10px; }
+  .who > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .who ul { font-size: 14.5px; }
+
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .answers > div { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+  .answers > div:first-child { border-top: 0; }
+  @media (min-width: 840px) {
+    .answers > div { border-top: 0; border-left: 1px solid var(--line); }
+    .answers > div:first-child { border-left: 0; }
+  }
+  .answers .q { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .answers .a { font-weight: 700; font-size: 17px; }
+  .answers p { font-size: 14.5px; color: var(--muted); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+  .scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); max-width: 720px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-top: 1px solid var(--line); }
+  thead th { border-top: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .yes { color: var(--px); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 600; }
+  .part { color: var(--muted); font-weight: 600; }
+
+  /* diagram marks: tiles with a header strip, dashed groups with a tab, pill labels on edges */
+  .d-tile { fill: var(--panel); }
+  .d-tile-b { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+  .d-tile-b.gw { stroke: var(--gw); stroke-width: 1.6; }
+  .d-tile-b.px { stroke: var(--px); stroke-width: 1.6; }
+  .d-tile-b.warn { stroke: var(--warn); stroke-width: 1.6; }
+  .d-head { fill: var(--actor); }
+  .d-head.gw { fill: color-mix(in srgb, var(--gw) 13%, var(--panel)); }
+  .d-head.px { fill: color-mix(in srgb, var(--px) 13%, var(--panel)); }
+  .d-head.warn { fill: color-mix(in srgb, var(--warn) 13%, var(--panel)); }
+  .d-kind { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; font-weight: 600; }
+  .d-kind.gw { fill: var(--gw); } .d-kind.px { fill: var(--px); } .d-kind.warn { fill: var(--warn); }
+  .d-own { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+  .d-ico { color: var(--muted); }
+  .d-ico.gw { color: var(--gw); } .d-ico.px { color: var(--px); } .d-ico.warn { color: var(--warn); }
+  .d-grp { fill: color-mix(in srgb, var(--line-strong) 10%, var(--canvas)); stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .d-grp.gw { fill: color-mix(in srgb, var(--gw) 8%, var(--canvas)); stroke: var(--gw); }
+  .d-grp.px { fill: color-mix(in srgb, var(--px) 8%, var(--canvas)); stroke: var(--px); }
+  .d-tab { fill: var(--line-strong); } .d-tab.gw { fill: var(--gw); } .d-tab.px { fill: var(--px); }
+  .d-tabt { fill: var(--panel); font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .d-pill { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-pill.warn { stroke: var(--warn); } .d-pill.px { stroke: var(--px); }
+  .d-pillt { fill: var(--muted); font-family: var(--sans); font-size: 10.5px; font-weight: 500; }
+  .d-pillt.warn { fill: var(--warn); } .d-pillt.px { fill: var(--px); }
+  .d-t { fill: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; }
+  .d-s { fill: var(--muted); font-family: var(--sans); font-size: 11.5px; }
+  .d-moved { fill: var(--warn); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+  .d-title { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  .d-title.gw { fill: var(--gw); } .d-title.px { fill: var(--px); } .d-title.warn { fill: var(--warn); }
+  .d-edge { stroke: var(--fg); stroke-width: 1.3; fill: none; }
+  .d-edge.warn { stroke: var(--warn); stroke-width: 2; }
+  .d-edge.px { stroke: var(--px); stroke-width: 2; }
+  .d-edge.dash { stroke-dasharray: 5 4; }
+  .d-ah { fill: var(--fg); } .d-ah.warn { fill: var(--warn); } .d-ah.px { fill: var(--px); }
+  .d-rule { stroke: var(--line); stroke-width: 1; }
+  .d-legend { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+  .d-lg { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+</style>
+<style>
+  .site-bar {
+    max-width: 1080px; margin: 0 auto; padding-top: 14px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.4;
+  }
+  .site-bar nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .site-bar a { color: var(--muted); font-weight: 500; text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .site-bar a:hover { color: var(--fg); }
+  .site-bar a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--line-strong); }
+  .theme { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .theme label { position: relative; display: block; }
+  .theme input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .theme span { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .theme input:checked + span { background: var(--code-bg); color: var(--fg); }
+  .site-bar a:focus-visible, .theme input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+  .pages a { color: inherit; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="site-bar">
+  <nav aria-label="Pages">
+    <a href="index.html">Overview</a>
+    <a href="ingress-paths.html">Praxis ingress paths</a>
+    <a href="cr-relationships.html">Praxis CR relationships</a>
+    <a href="migration.html" aria-current="page">Praxis migration</a>
+  </nav>
+  <div class="theme" role="radiogroup" aria-label="Theme" hidden>
+    <label><input type="radio" name="theme" value="system"><span>System</span></label>
+    <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+  </div>
+</div>
+
+<div class="page">
+
+<header class="prose">
+  <div class="eyebrow">Praxis data plane · MaaS and KServe</div>
+  <h1>Praxis migration</h1>
+  <p class="lede">A tenant can move from Gateway API on Istio to Praxis in stages, with the tenant Gateway kept as the ingress and no change to what users write. The preparation in MaaS and KServe can start now. The cut-over depends on work in Praxis that is still open.</p>
+</header>
+
+<div class="answers">
+  <div>
+    <span class="q">Can start now</span>
+    <span class="a">Preparation in MaaS and KServe</span>
+    <p>MaaS stops depending on the HTTPRoute, and KServe publishes complete status for a service without a route. Neither change needs Praxis, and neither changes client traffic.</p>
+  </div>
+  <div>
+    <span class="q">Waits on Praxis</span>
+    <span class="a">Proxy deployment, the EPP client and the policy engine</span>
+    <p><code>gateway-controller</code> does not deploy a proxy yet, the EPP client does not cover services with a scheduler, and the policy engine has no Kubernetes token authentication.</p>
+  </div>
+  <div>
+    <span class="q">Unit of the switch</span>
+    <span class="a">A tenant, not a model</span>
+    <p>With the Gateway kept in front, the requests for a model follow its HTTPRoute until the route is removed, and routes are removed per Gateway.</p>
+  </div>
+</div>
+
+<section>
+  <div class="prose">
+    <h2>Stages</h2>
+    <p>We looked for a sequence in which clients keep the hostname, the request URL and the model ID they use today. That requires the tenant Gateway to stay in front of the Praxis proxy, with one route that forwards model requests to it. On that Gateway the per-model HTTPRoute and the forwarding route do not share traffic. The per-model rules are more specific, so the requests for a model reach Praxis only after its HTTPRoute is removed. The four stages follow from that.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1040 682" role="img" aria-label="Client request path in the four migration stages. In stage 1 and stage 2 the request goes through the tenant Gateway, Kuadrant and the per-model HTTPRoute to the pods. In stage 2 a Praxis proxy and a forwarding route exist, and only test traffic reaches the proxy. In stage 3 the per-model routes are removed and the forwarding route sends model requests to the Praxis proxy. In stage 4 the Kuadrant policies are removed from the Gateway.">
+        <defs>
+        <marker id="f3-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah " d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f3-ah-warn" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah warn" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="f3-ah-px" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="d-ah px" d="M0 0 L10 5 L0 10 z"/></marker>
+        <filter id="f3-sh" x="-5%" y="-15%" width="110%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.09"/></filter>
+        <symbol id="f3-i-hex" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l6 3.5v7L9 16l-6-3.5v-7z"/><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="f3-i-shield" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5.5 2v4.6c0 3.3-2.3 5.9-5.5 7.4-3.2-1.5-5.5-4.1-5.5-7.4V4z"/><path d="M6.6 9l1.7 1.7 3.2-3.4"/></symbol>
+        <symbol id="f3-i-route" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="13.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="13.5" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 11.5V10c0-2 1.3-3 3.3-3h2.4c1.4 0 2.3-.4 2.9-1.1"/></symbol>
+        <symbol id="f3-i-pool" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="8.5" height="8.5" rx="1.5"/><path d="M6.5 6V4.5A1.5 1.5 0 0 1 8 3h5.5A1.5 1.5 0 0 1 15 4.5V10a1.5 1.5 0 0 1-1.5 1.5h-2"/></symbol>
+        <symbol id="f3-i-cr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="13" height="13" rx="2.5"/><text x="9" y="11.6" text-anchor="middle" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">CR</text></symbol>
+        <symbol id="f3-i-ext" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></symbol>
+        <symbol id="f3-i-ctrl" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a5 5 0 1 1-1.7-3.75"/><path d="M12.6 2.6v2.9H9.7"/></symbol>
+        </defs>
+        <rect class="d-grp px" x="782" y="346" width="206" height="152" rx="12"/>
+        <rect class="d-grp gw" x="782" y="96" width="206" height="214" rx="12"/>
+        <rect class="d-grp px" x="526" y="346" width="206" height="152" rx="12"/>
+        <rect class="d-grp gw" x="526" y="96" width="206" height="214" rx="12"/>
+        <rect class="d-grp px" x="270" y="346" width="206" height="152" rx="12"/>
+        <rect class="d-grp gw" x="270" y="96" width="206" height="214" rx="12"/>
+        <rect class="d-grp gw" x="14" y="96" width="206" height="214" rx="12"/>
+        <polyline class="d-edge " points="117.0,66 117.0,96" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="220,209 238,209 238,546" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="373.0,66 373.0,96" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="476,209 494,209 494,546" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge  dash" points="373.0,498 373.0,546" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="629.0,66 629.0,96" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="629.0,310 629.0,346" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="629.0,498 629.0,546" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="885.0,66 885.0,96" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="885.0,310 885.0,346" marker-end="url(#f3-ah)"/>
+        <polyline class="d-edge " points="885.0,498 885.0,546" marker-end="url(#f3-ah)"/>
+        <text class="d-title gw" x="14" y="20">1. PREPARE</text>
+        <rect class="d-tile" x="67.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+        <rect class="d-tile-b" x="67.0" y="34" width="100" height="32" rx="8"/>
+        <text class="d-t" x="117.0" y="54.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="28" y="86" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="108.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+        <rect class="d-tile" x="24" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M24.6 144V128Q24.6 120.6 32 120.6H202Q209.4 120.6 209.4 128V144Z"/>
+        <rect class="d-tile-b " x="24" y="120" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="32" y="123" width="18" height="18"/>
+        <text class="d-kind " x="56" y="136.5">Kuadrant</text>
+        <text class="d-s" x="36" y="162">auth and token limits</text>
+        <rect class="d-tile" x="24" y="182" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head warn" d="M24.6 206V190Q24.6 182.6 32 182.6H202Q209.4 182.6 209.4 190V206Z"/>
+        <rect class="d-tile-b warn" x="24" y="182" width="186" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f3-i-route" x="32" y="185" width="18" height="18"/>
+        <text class="d-kind warn" x="56" y="198.5">HTTPRoute per model</text>
+        <text class="d-s" x="36" y="224">serves every client request</text>
+        <text class="d-s" x="117.0" y="425" text-anchor="middle">No Praxis objects yet</text>
+        <rect class="d-pill " x="209.5" y="319" width="57" height="18" rx="9"/>
+        <text class="d-pillt " x="238" y="331.6" text-anchor="middle">request</text>
+        <rect class="d-tile" x="14" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M14.6 570V554Q14.6 546.6 22 546.6H246Q253.4 546.6 253.4 554V570Z"/>
+        <rect class="d-tile-b " x="14" y="546" width="240" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-pool" x="22" y="549" width="18" height="18"/>
+        <text class="d-kind " x="46" y="562.5">EPP and vLLM pods</text>
+        <text class="d-s" x="26" y="588">the same pods in every stage</text>
+        <text class="d-title gw" x="270" y="20">2. PRAXIS NEXT TO THE ROUTES</text>
+        <rect class="d-tile" x="323.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+        <rect class="d-tile-b" x="323.0" y="34" width="100" height="32" rx="8"/>
+        <text class="d-t" x="373.0" y="54.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="284" y="86" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="364.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+        <rect class="d-tile" x="280" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M280.6 144V128Q280.6 120.6 288 120.6H458Q465.4 120.6 465.4 128V144Z"/>
+        <rect class="d-tile-b " x="280" y="120" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="288" y="123" width="18" height="18"/>
+        <text class="d-kind " x="312" y="136.5">Kuadrant</text>
+        <text class="d-s" x="292" y="162">auth and token limits</text>
+        <rect class="d-tile" x="280" y="182" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head warn" d="M280.6 206V190Q280.6 182.6 288 182.6H458Q465.4 182.6 465.4 190V206Z"/>
+        <rect class="d-tile-b warn" x="280" y="182" width="186" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f3-i-route" x="288" y="185" width="18" height="18"/>
+        <text class="d-kind warn" x="312" y="198.5">HTTPRoute per model</text>
+        <text class="d-s" x="292" y="224">serves every client request</text>
+        <rect class="d-tile" x="280" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M280.6 268V252Q280.6 244.6 288 244.6H458Q465.4 244.6 465.4 252V268Z"/>
+        <rect class="d-tile-b " x="280" y="244" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-route" x="288" y="247" width="18" height="18"/>
+        <text class="d-kind " x="312" y="260.5">Forwarding route</text>
+        <text class="d-s" x="292" y="286">outranked by model routes</text>
+        <rect class="d-tab px" x="284" y="336" width="98" height="20" rx="5"/>
+        <text class="d-tabt" x="333.0" y="350" text-anchor="middle">Praxis proxy</text>
+        <rect class="d-tile" x="280" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M280.6 394V378Q280.6 370.6 288 370.6H458Q465.4 370.6 465.4 378V394Z"/>
+        <rect class="d-tile-b " x="280" y="370" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="288" y="373" width="18" height="18"/>
+        <text class="d-kind " x="312" y="386.5">Policy slot</text>
+        <text class="d-s" x="292" y="412">auth and token limits</text>
+        <rect class="d-tile" x="280" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M280.6 456V440Q280.6 432.6 288 432.6H458Q465.4 432.6 465.4 440V456Z"/>
+        <rect class="d-tile-b " x="280" y="432" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-route" x="288" y="435" width="18" height="18"/>
+        <text class="d-kind " x="312" y="448.5">Routing slot</text>
+        <text class="d-s" x="292" y="474">backend by model name</text>
+        <rect class="d-pill " x="465.5" y="319" width="57" height="18" rx="9"/>
+        <text class="d-pillt " x="494" y="331.6" text-anchor="middle">request</text>
+        <rect class="d-pill " x="330.5" y="513" width="85" height="18" rx="9"/>
+        <text class="d-pillt " x="373.0" y="525.6" text-anchor="middle">test traffic</text>
+        <rect class="d-tile" x="270" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M270.6 570V554Q270.6 546.6 278 546.6H502Q509.4 546.6 509.4 554V570Z"/>
+        <rect class="d-tile-b " x="270" y="546" width="240" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-pool" x="278" y="549" width="18" height="18"/>
+        <text class="d-kind " x="302" y="562.5">EPP and vLLM pods</text>
+        <text class="d-s" x="282" y="588">the same pods in every stage</text>
+        <text class="d-title px" x="526" y="20">3. CUT-OVER OF A TENANT</text>
+        <rect class="d-tile" x="579.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+        <rect class="d-tile-b" x="579.0" y="34" width="100" height="32" rx="8"/>
+        <text class="d-t" x="629.0" y="54.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="540" y="86" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="620.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+        <rect class="d-tile" x="536" y="120" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M536.6 144V128Q536.6 120.6 544 120.6H714Q721.4 120.6 721.4 128V144Z"/>
+        <rect class="d-tile-b " x="536" y="120" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="544" y="123" width="18" height="18"/>
+        <text class="d-kind " x="568" y="136.5">Kuadrant</text>
+        <text class="d-s" x="548" y="162">gateway-level policies</text>
+        <text class="d-s" x="629.0" y="213" text-anchor="middle">per-model routes removed</text>
+        <rect class="d-tile" x="536" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M536.6 268V252Q536.6 244.6 544 244.6H714Q721.4 244.6 721.4 252V268Z"/>
+        <rect class="d-tile-b " x="536" y="244" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-route" x="544" y="247" width="18" height="18"/>
+        <text class="d-kind " x="568" y="260.5">Forwarding route</text>
+        <text class="d-s" x="548" y="286">all model requests</text>
+        <rect class="d-tab px" x="540" y="336" width="98" height="20" rx="5"/>
+        <text class="d-tabt" x="589.0" y="350" text-anchor="middle">Praxis proxy</text>
+        <rect class="d-tile" x="536" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M536.6 394V378Q536.6 370.6 544 370.6H714Q721.4 370.6 721.4 378V394Z"/>
+        <rect class="d-tile-b " x="536" y="370" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="544" y="373" width="18" height="18"/>
+        <text class="d-kind " x="568" y="386.5">Policy slot</text>
+        <text class="d-s" x="548" y="412">auth and token limits</text>
+        <rect class="d-tile" x="536" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head warn" d="M536.6 456V440Q536.6 432.6 544 432.6H714Q721.4 432.6 721.4 440V456Z"/>
+        <rect class="d-tile-b warn" x="536" y="432" width="186" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f3-i-route" x="544" y="435" width="18" height="18"/>
+        <text class="d-kind warn" x="568" y="448.5">Routing slot</text>
+        <text class="d-s" x="548" y="474">backend by model name</text>
+        <rect class="d-tile" x="526" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M526.6 570V554Q526.6 546.6 534 546.6H758Q765.4 546.6 765.4 554V570Z"/>
+        <rect class="d-tile-b " x="526" y="546" width="240" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-pool" x="534" y="549" width="18" height="18"/>
+        <text class="d-kind " x="558" y="562.5">EPP and vLLM pods</text>
+        <text class="d-s" x="538" y="588">the same pods in every stage</text>
+        <text class="d-title px" x="782" y="20">4. CLEAN-UP</text>
+        <rect class="d-tile" x="835.0" y="34" width="100" height="32" rx="8" filter="url(#f3-sh)"/>
+        <rect class="d-tile-b" x="835.0" y="34" width="100" height="32" rx="8"/>
+        <text class="d-t" x="885.0" y="54.5" text-anchor="middle">Client</text>
+        <rect class="d-tab gw" x="796" y="86" width="161" height="20" rx="5"/>
+        <text class="d-tabt" x="876.5" y="100" text-anchor="middle">Tenant Gateway (Istio)</text>
+        <text class="d-s" x="885.0" y="151" text-anchor="middle">Kuadrant policies removed</text>
+        <text class="d-s" x="885.0" y="213" text-anchor="middle">per-model routes removed</text>
+        <rect class="d-tile" x="792" y="244" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M792.6 268V252Q792.6 244.6 800 244.6H970Q977.4 244.6 977.4 252V268Z"/>
+        <rect class="d-tile-b " x="792" y="244" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-route" x="800" y="247" width="18" height="18"/>
+        <text class="d-kind " x="824" y="260.5">Forwarding route</text>
+        <text class="d-s" x="804" y="286">all model requests</text>
+        <rect class="d-tab px" x="796" y="336" width="98" height="20" rx="5"/>
+        <text class="d-tabt" x="845.0" y="350" text-anchor="middle">Praxis proxy</text>
+        <rect class="d-tile" x="792" y="370" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M792.6 394V378Q792.6 370.6 800 370.6H970Q977.4 370.6 977.4 378V394Z"/>
+        <rect class="d-tile-b " x="792" y="370" width="186" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-shield" x="800" y="373" width="18" height="18"/>
+        <text class="d-kind " x="824" y="386.5">Policy slot</text>
+        <text class="d-s" x="804" y="412">auth and token limits</text>
+        <rect class="d-tile" x="792" y="432" width="186" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head warn" d="M792.6 456V440Q792.6 432.6 800 432.6H970Q977.4 432.6 977.4 440V456Z"/>
+        <rect class="d-tile-b warn" x="792" y="432" width="186" height="54" rx="8"/>
+        <use class="d-ico warn" href="#f3-i-route" x="800" y="435" width="18" height="18"/>
+        <text class="d-kind warn" x="824" y="448.5">Routing slot</text>
+        <text class="d-s" x="804" y="474">backend by model name</text>
+        <rect class="d-tile" x="782" y="546" width="240" height="54" rx="8" filter="url(#f3-sh)"/>
+        <path class="d-head " d="M782.6 570V554Q782.6 546.6 790 546.6H1014Q1021.4 546.6 1021.4 554V570Z"/>
+        <rect class="d-tile-b " x="782" y="546" width="240" height="54" rx="8"/>
+        <use class="d-ico " href="#f3-i-pool" x="790" y="549" width="18" height="18"/>
+        <text class="d-kind " x="814" y="562.5">EPP and vLLM pods</text>
+        <text class="d-s" x="794" y="588">the same pods in every stage</text>
+        <rect class="d-legend" x="16" y="616" width="1008" height="54" rx="8"/>
+        <line class="d-edge " x1="32" y1="632.0" x2="62" y2="632.0" marker-end="url(#f3-ah)"/>
+        <text class="d-lg" x="70" y="635.8">client request</text>
+        <line class="d-edge  dash" x1="178.60000000000002" y1="632.0" x2="208.60000000000002" y2="632.0" marker-end="url(#f3-ah)"/>
+        <text class="d-lg" x="216.60000000000002" y="635.8">test traffic, addressed to the proxy directly</text>
+        <rect class="d-tile" x="508.1" y="626.0" width="18" height="12" rx="3"/>
+        <rect class="d-tile-b warn" x="508.1" y="626.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="534.1" y="635.8">carries the per-model routing decision</text>
+        <rect class="d-grp " x="32" y="648.0" width="18" height="12" rx="3"/>
+        <text class="d-lg" x="58" y="657.8">one proxy and the layers inside it</text>
+      </svg>
+    </div>
+    <figcaption>The path of a client request in each stage. In stages 1 and 2 the per-model HTTPRoute serves every request. From stage 3 the forwarding route sends model requests to the Praxis proxy of the tenant. The EPP and the pods are the same in all four.</figcaption>
+    <div class="who">
+      <div>
+        <h3>Who does what, and why</h3>
+        <ul>
+          <li>The user changes nothing. The <code>LLMInferenceService</code> keeps <code>spec.router.route</code> and <code>gateway.refs</code>, and the <code>MaaSModelRef</code> stays as it is.</li>
+          <li>KServe publishes the backend, the port, the served model names and <code>Ready</code> in status with or without a route in stage 1. In stage 3 it stops rendering the HTTPRoute for a Gateway that opts in.</li>
+          <li>MaaS reads the service status in place of the route in stage 1. In stage 2 it creates the <code>Proxy</code> and the <code>Policy</code> of the tenant, one <code>ModelProvider</code> per <code>MaaSModelRef</code>, and the forwarding route on the tenant Gateway. The forwarding route has no owner today, and MaaS already manages the other objects of the tenant.</li>
+          <li><code>gateway-controller</code> renders and deploys the proxy from the objects MaaS creates.</li>
+          <li>The platform admin marks the tenant Gateway to start stage 3, and removes the mark to roll it back.</li>
+        </ul>
+      </div>
+    </div>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Stage</th><th>Who</th><th>What changes</th><th>Client traffic</th><th>Rollback</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>MaaS, KServe</td><td>MaaS takes the backend, the model ID, readiness and the tenant from the <code>LLMInferenceService</code> status and its <code>gateway.refs</code>, and no longer looks up the HTTPRoute. KServe publishes complete status for a service without a route.</td><td>Istio</td><td>None needed. Behaviour is unchanged.</td></tr>
+        <tr><td class="num">2</td><td>MaaS, <code>gateway-controller</code></td><td>The tenant gets a <code>Proxy</code> and a <code>Policy</code>, and each <code>MaaSModelRef</code> gets a <code>ModelProvider</code> that references the same pool or Service as the route. MaaS adds the forwarding route to the tenant Gateway. The proxy is tested with requests addressed to it directly.</td><td>Istio</td><td>Delete the Praxis objects and the forwarding route.</td></tr>
+        <tr><td class="num">3</td><td>Platform admin, KServe</td><td>The tenant Gateway is marked. KServe deletes the HTTPRoutes of the services on that Gateway, and their spec and status stay as they are. Their requests now match the forwarding route.</td><td>Praxis</td><td>Remove the mark. KServe creates the routes again, and they take precedence.</td></tr>
+        <tr><td class="num">4</td><td>MaaS</td><td>MaaS stops generating Kuadrant policies for the tenant and deletes the ones on the Gateway.</td><td>Praxis</td><td>Generate the Kuadrant policies again, then roll back stage 3.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>What can start now</h2>
+    <p>Stage 1 is the largest part of the work on our side, and it does not depend on Praxis. It replaces the HTTPRoute as the integration point between MaaS and KServe with the service status, and it changes nothing for clients. The individual changes are listed in <a href="ingress-paths.html">Praxis ingress paths</a>.</p>
+    <ul>
+      <li>MaaS reads the backend, the model ID and readiness from the service status, resolves the tenant from <code>gateway.refs</code>, and writes the <code>InferenceObjective</code> without checking the route.</li>
+      <li>KServe lets a service with a scheduler and no route become <code>Ready</code>, and publishes the pool, the port and the served model names for it.</li>
+      <li>KServe adds the switch that skips the HTTPRoute for a Gateway that opts in. It has a precedent in <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/pkg/controller/v1alpha2/llmisvc/router.go#L83" target="_blank" rel="noopener"><code>serving.kserve.io/model-based-routing-only</code></a>, which is read from the parent Gateway as well.</li>
+      <li>Stage 1 has to be complete before stage 3. On today's MaaS code, removing the route sets the <code>MaaSModelRef</code> to <code>Pending</code>, deletes the per-model rate limit policy, and leaves MaaS unable to find the tenant of the model.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>What the cut-over waits for</h2>
+    <p>Stages 2 and 3 cannot be carried out today. They need the items below from Praxis, and none of them is in our control. The dates are the milestone dates as read on 2026-11-20.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Needed for</th><th>What is missing</th><th>State</th><th>Tracked in</th></tr></thead>
+      <tbody>
+        <tr><td>Stage 2</td><td>A <code>ModelProvider</code> type and its controller.</td><td>Not implemented.</td><td><a href="https://github.com/praxis-proxy/gateway-controller/issues/40" target="_blank" rel="noopener"><code>gateway-controller#40</code></a> and <a href="https://github.com/praxis-proxy/gateway-controller/issues/42" target="_blank" rel="noopener"><code>gateway-controller#42</code></a>, with no milestone. The KServe epic <a href="https://github.com/praxis-proxy/gateway-controller/issues/24" target="_blank" rel="noopener"><code>gateway-controller#24</code></a> is in the <a href="https://github.com/praxis-proxy/gateway-controller/milestone/1" target="_blank" rel="noopener"><code>v1.0.0</code> milestone</a>, due 2027-01-20.</td></tr>
+        <tr><td>Stage 2</td><td>A proxy that is rendered and deployed from a <code>Proxy</code>.</td><td>In a draft.</td><td><a href="https://github.com/praxis-proxy/gateway-controller/issues/14" target="_blank" rel="noopener"><code>gateway-controller#14</code></a> to <a href="https://github.com/praxis-proxy/gateway-controller/issues/17" target="_blank" rel="noopener"><code>gateway-controller#17</code></a>, and the draft <a href="https://github.com/praxis-proxy/gateway-controller/pull/82" target="_blank" rel="noopener"><code>gateway-controller#82</code></a>.</td></tr>
+        <tr><td>Stage 3, services with a scheduler</td><td>An EPP client that selects its target per model, supports TLS and sends response bodies to the EPP.</td><td>It takes one static target, AFAICT it has no TLS, and it is off in published builds.</td><td>No open issue. <a href="https://github.com/praxis-proxy/ai/issues/165" target="_blank" rel="noopener"><code>ai#165</code></a> is closed as completed.</td></tr>
+        <tr><td>Stage 3</td><td>Kubernetes token authentication and authorization.</td><td>Not implemented.</td><td><a href="https://github.com/praxis-proxy/policy/issues/213" target="_blank" rel="noopener"><code>policy#213</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/8" target="_blank" rel="noopener"><code>0.8.0</code></a>, due 2026-12-18. <a href="https://github.com/praxis-proxy/policy/issues/214" target="_blank" rel="noopener"><code>policy#214</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/7" target="_blank" rel="noopener"><code>0.7.0</code></a>, due 2026-12-03.</td></tr>
+        <tr><td>Stage 3</td><td>A token limit per model.</td><td>Route matching in the policy engine does not support headers.</td><td><a href="https://github.com/praxis-proxy/policy/issues/352" target="_blank" rel="noopener"><code>policy#352</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/8" target="_blank" rel="noopener"><code>0.8.0</code></a>. <a href="https://github.com/praxis-proxy/policy/issues/308" target="_blank" rel="noopener"><code>policy#308</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/4" target="_blank" rel="noopener"><code>1.0.0</code></a>, due 2027-01-08.</td></tr>
+        <tr><td>Stage 3, more than one proxy replica</td><td>Limit counters shared between replicas.</td><td>Counters are kept per replica.</td><td><a href="https://github.com/praxis-proxy/policy/issues/127" target="_blank" rel="noopener"><code>policy#127</code></a> in <a href="https://github.com/praxis-proxy/policy/milestone/7" target="_blank" rel="noopener"><code>0.7.0</code></a>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <ul>
+      <li>Because the cut-over is per tenant, one service with a scheduler blocks the cut-over of its tenant until the EPP client is extended.</li>
+      <li>On the ODH build, strict NetworkPolicy takes the allowed namespaces from Gateway references only. The namespace of the proxy has to be allowed before stage 2.</li>
+      <li>The FIPS image of Praxis is built without the policy filter today, and stage 3 needs it.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Limits of running Praxis next to the routes</h2>
+    <p>Stage 2 is a verification stage. It shows that the proxy, the policies and the providers of a tenant work, and it does not move client traffic to Praxis.</p>
+    <ul>
+      <li>KServe's model rules match <a href="https://github.com/kserve/kserve/blob/cdbe9860583e36f29d46a58179d86299e8faa41d/config/llmisvcconfig/config-llm-router-route.yaml#L193-L200" target="_blank" rel="noopener">an exact path and the model header</a>, which is more specific than a forwarding route can be, and Gateway API <a href="https://github.com/kubernetes-sigs/gateway-api/blob/v1.6.2/apis/v1/httproute_types.go#L184-L200" target="_blank" rel="noopener">gives precedence to the more specific rule</a>. The forwarding route therefore receives the requests for a model only after its per-model route has been removed.</li>
+      <li>The mark is on the Gateway, so the cut-over moves all services of a tenant together. Moving a single model would need a switch per service, which is a new field or annotation in what users write. We left it out to keep the user-facing API unchanged.</li>
+      <li>Limitador and Praxis do not share counters. AFAICT the token counters of a subscription restart at the cut-over.</li>
+      <li>The gateway-level <code>AuthPolicy</code> and the default-deny rate limit apply to the forwarding route too. Either MaaS attaches policies to the forwarding route that allow the requests, which authenticates a request twice, or the gateway-level policies are removed in stage 3 and not in stage 4. This decision is open.</li>
+      <li>In stage 2 Istio and Praxis call the same EPP. Its TLS is controlled by a cluster-wide KServe setting, and AFAICT the Praxis <code>ext_proc</code> client has no TLS, so test traffic for a service with a scheduler does not work yet either.</li>
+      <li>Stopping or deleting a service removes its pool and its Service immediately. From stage 2 MaaS has to delete the provider at the same time.</li>
+      <li>The model ID is a contract. Clients send the name MaaS publishes today, so <code>publishedName</code> has to equal <code>status.resolvedModelAlias</code>.</li>
+      <li>Requests to per-model path URLs of the form <code>/&lt;namespace&gt;/&lt;name&gt;/v1/...</code> stop working in stage 3 unless Praxis serves paths. What else clients and admins can observe is listed in <a href="ingress-paths.html">Praxis ingress paths</a>.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="prose">
+    <h2>Not verified</h2>
+    <p>The stages are a design based on reading code and issues. The following was not verified.</p>
+    <ul>
+      <li>Nothing was run on a cluster.</li>
+      <li>That the per-model rules take precedence over a forwarding route is read from the Gateway API types and KServe's route preset. It was not tested on Istio.</li>
+      <li>The forwarding route, its owner and the mark on the Gateway do not exist. They are suggestions.</li>
+      <li>The milestone dates are plans.</li>
+      <li>How many services use a scheduler, which decides how many tenants wait for the EPP client.</li>
+      <li>Whether rate limit counters can be carried over at the cut-over.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var control = document.querySelector(".theme");
+    var stored = root.getAttribute("data-theme");
+    var current = stored === "light" || stored === "dark" ? stored : "system";
+    control.querySelectorAll("input").forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var choice = input.value;
+        if (choice === "system") root.removeAttribute("data-theme");
+        else root.setAttribute("data-theme", choice);
+        try {
+          if (choice === "system") localStorage.removeItem("kserve-praxis-integration:theme");
+          else localStorage.setItem("kserve-praxis-integration:theme", choice);
+        } catch (e) {}
+      });
+    });
+    control.hidden = false;
+  })();
+</script>
+</body>
+</html>
