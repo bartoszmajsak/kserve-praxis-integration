@@ -138,8 +138,7 @@ MaaS has the larger share of the work. It derives nearly all model information f
 | Write the `InferenceObjective` without checking the route. | It is only written when the model's route is on the tenant Gateway. | Small |
 | Generate per-model token limits that do not attach to a route. | The rate limit policy targets the HTTPRoute and has it as owner. Praxis has to support a limit per model first. | New |
 | Generate a Praxis `Policy` from `MaaSAuthPolicy`. | It becomes a Kuadrant `AuthPolicy` that targets the tenant Gateway. Kubernetes token auth waits on [`policy#213`](https://github.com/praxis-proxy/policy/issues/213). | New |
-| Let an `AITenant` work without a Gateway, and create a `Proxy` and a `Policy` for it. | The tenant is set to `Failed` when its Gateway check fails, and it has no field for a `Proxy`. | New |
-| Decide where `maas-api` is served. | Through the tenant Gateway, by its own HTTPRoute. Its paths include `/maas-api`, `/v1/models` and `/v1/api-keys`. | Decision |
+| Create a `Proxy` and a `Policy` for an `AITenant`, and record the `Proxy` on it. | An `AITenant` names its Gateway and checks it. It has no field for a `Proxy`. | New |
 | Write a routing entry for each `MaaSModelRef` into the tenant's `Proxy`, and remove it when the service stops or is deleted. | MaaS already does the same for an `InferenceObjective` per pool. It needs RBAC and a watch for the Praxis types. | Medium |
 | Write two kinds of entries for a model with a scheduler: the inference endpoints through the EPP, and every other path to the workload Service. | MaaS has no code for this, because the HTTPRoute carries the split today. The paths have to come from the service status, and not from a list in MaaS. | New |
 | Use the current model ID as the routing key. | `ResolveModelAlias` takes it from the service's status addresses, or builds `publishers/{ns}/models/{name}` from the spec. | Small |
@@ -153,12 +152,13 @@ MaaS has the larger share of the work. It derives nearly all model information f
 Delivering the decision depends on work in Praxis that is not ours. The cut-over of a tenant waits for it. The dates and the stages are in [Migration](migration.md).
 
 - `gateway-controller` renders and deploys the proxy from a `Proxy` and a `Policy`. This is tracked in [`gateway-controller#14`](https://github.com/praxis-proxy/gateway-controller/issues/14) to [`#17`](https://github.com/praxis-proxy/gateway-controller/issues/17) and in the draft [`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82).
-- The EPP client of Praxis selects its target per model, supports TLS and sends response bodies to the EPP. Services with a scheduler need it. No issue is open for it, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed.
+- The EPP client of Praxis selects its target per model and sends response bodies to the EPP. Services with a scheduler need it. No issue is open for it, and [`ai#165`](https://github.com/praxis-proxy/ai/issues/165) is closed as completed.
 - The policy engine supports Kubernetes token authentication and authorization ([`policy#213`](https://github.com/praxis-proxy/policy/issues/213), [`policy#214`](https://github.com/praxis-proxy/policy/issues/214)), a token limit per model ([`policy#352`](https://github.com/praxis-proxy/policy/issues/352), [`policy#308`](https://github.com/praxis-proxy/policy/issues/308)) and limit counters shared between replicas ([`policy#127`](https://github.com/praxis-proxy/policy/issues/127)).
 
 ## Open Questions
 
 - **How KServe recognises a Gateway that is in front of a Praxis proxy.** KServe already fetches the Gateway and its `GatewayClass` for every parent of a route, so the lookup is available. Which property carries the signal is not decided. The `GatewayClass` identifies Praxis only if that Gateway has a class of its own: a Praxis class exists in the Rust `operator`, named `praxis` with the controller `praxis.sh/gateway-controller`, and a Gateway from another provider carries the class of that provider. An annotation on the Gateway is the other candidate, as KServe reads `serving.kserve.io/model-based-routing-only` from it today. The integration proposal in `gateway-controller` names neither and leaves the question open ([PR #26](https://github.com/praxis-proxy/gateway-controller/pull/26)).
+- **How the connection from the proxy to the EPP is secured.** The TLS of the EPP is controlled by a cluster-wide KServe setting. At `a59c927` the EPP client of Praxis has no TLS settings, and AFAICT its gRPC library is built without TLS. This was read from the code and not tested. Either the client gains TLS, or the EPP is served without it for Praxis.
 
 ## Alternatives
 
@@ -205,13 +205,13 @@ The table lists the relationships that change between the current setup, the two
 - KServe gets no new permissions. It writes only in the model namespace and needs no access to the tenant namespace or to Praxis types.
 - MaaS needs permissions for the Praxis types in the tenant namespace, and it keeps writing the `InferenceObjective` into the model namespace.
 - The proxy of a tenant sends requests to pods in the model namespaces. The Praxis design leaves that access to NetworkPolicy and admission policy, and on the ODH build strict NetworkPolicy has to allow the namespace of the proxy.
-- AFAICT the Praxis `ext_proc` client has no TLS, while the TLS of the EPP is controlled by a cluster-wide KServe setting. How the proxy connects to the EPP is therefore unresolved for services with a scheduler.
+- The TLS of the EPP is controlled by a cluster-wide KServe setting. How the connection from the proxy to the EPP is secured is an open question.
 - No new data is stored. The proxy reads the request body to find the model name, as `praxis-extproc` does on MaaS gateways today.
 
 ## Risks
 
 - In the current draft a routing change rolls the proxy pods. A `Proxy` has no field for a mounted routing file, so the routing is part of the rendered configuration. The draft that renders the proxy ([`gateway-controller#82`](https://github.com/praxis-proxy/gateway-controller/pull/82)) sets a revision of that configuration as an annotation on the pod template, so the Deployment rolls on every change.
-- Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target and has no TLS. The alternatives have the same limit until that client is extended.
+- Today the routing covers services without a scheduler, and no canary. The Praxis EPP client takes one static target, and how its connection to the EPP is secured is an open question. The alternatives have the same limit until that client is extended.
 - All models of a tenant are in one object, so every publish and unpublish is a write to the same `Proxy`.
 - The routing renderer in MaaS is discarded when the `ModelProvider` arrives. MaaS then creates one provider per `MaaSModelRef`.
 - A service without a `MaaSModelRef` has no routing entry. How services that are not published through MaaS are served is open.
